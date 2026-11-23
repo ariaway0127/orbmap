@@ -2,7 +2,7 @@
 
 A spatial canvas for planning work with AI agents. You give it a goal; it splits the goal into sub-goals and tasks, puts one bot in charge of each task, and shows all of them working on one zoomable map.
 
-![orbmap: an example map with sub-goals, tasks, steps and bots](docs/screenshot.png)
+![orbmap: bots pick up tasks on the map, then a task opens with its chat](docs/demo.gif)
 
 > **Two modes.** Open `index.html` in a browser and the bots run on a built-in script, so you can try the whole flow without anything installed. Start the desktop app and every bot is a real [Claude Code](https://docs.claude.com/en/docs/claude-code) session working in your project (see [Live mode](#live-mode-real-claude-code-sessions)).
 

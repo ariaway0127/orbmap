@@ -8,7 +8,7 @@ orbmap is one HTML file with plain JavaScript and Tailwind CSS. There is no fram
 index.html              the whole app: markup, styles, scenario pack, engine, UI
 tests/test_ui.py        end-to-end tests (Selenium, headless Chrome)
 tools/build_offline.py  inlines Tailwind so the app works without internet → dist/index.offline.html
-docs/                   this guide, templates.md, screenshots
+docs/                   this guide, templates.md, screenshot and demo GIF
 ```
 
 ## Inside index.html
