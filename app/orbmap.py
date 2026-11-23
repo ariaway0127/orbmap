@@ -58,10 +58,22 @@ class Api:
     def agent_options(self, agent_id, opts=None): return _safe(self._b.agent_options, agent_id, opts)
     def stop_agent(self, agent_id): return _safe(self._b.stop_agent, agent_id)
     def reset_session(self, agent_id): return _safe(self._b.reset_session, agent_id)
+    def shorten(self, items): return _safe(self._b.shorten, items)
+    def external_activity(self, agent_id): return _safe(self._b.external_activity, agent_id)
+    def external_transcript(self, agent_id, since=0): return _safe(self._b.external_transcript, agent_id, since)
+    def read_inbox(self, offset=0): return _safe(self._b.read_inbox, offset)
+    def report_guide(self, agent_id=None): return {'ok': True, 'text': self._b.report_guide(agent_id)}
+    def sessions_open_elsewhere(self): return _safe(self._b.sessions_open_elsewhere)
+    def sessions_running(self, ids): return _safe(self._b.sessions_running, ids)
+    def write_context(self, agent_id, text): return _safe(self._b.write_context, agent_id, text)
+    def post_reply(self, to_agent, frm, text, about=''): return _safe(self._b.post_reply, to_agent, frm, text, about)
 
     # existing sessions
     def list_sessions(self, folder): return _safe(self._b.list_sessions, folder)
     def all_sessions(self, days=45, limit=60): return _safe(self._b.all_sessions, days, limit)
+    def recent_folders(self, limit=12): return _safe(self._b.recent_folders, limit)
+    def join_text(self): return {'ok': True, 'text': self._b.join_text()}
+    def folder_sessions(self, folder): return _safe(self._b.folder_sessions, folder)
     def import_session(self, agent_id, role, folder, session_id, fork=False): return _safe(self._b.import_session, agent_id, role, folder, session_id, fork)
     def session_command(self, agent_id): return self._b.session_command(agent_id)
     def workspace(self): return str(self._b.ws)

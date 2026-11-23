@@ -10,7 +10,7 @@ Everything the app needs to survive a restart lives in <workspace>/.atlas/:
     .atlas/handoff/*.md      handoff notes written when a session gets full
     .atlas/log.jsonl         every call: agent, kind, cost, tokens, result
 """
-import json, os, pathlib, re, shutil, subprocess, threading, time, uuid
+import json, os, pathlib, re, shutil, subprocess, sys, threading, time, uuid
 
 from prompts import ROLE_PROMPTS, KIND_PROMPTS, SCHEMAS, TOOLS
 
@@ -34,6 +34,13 @@ class Backend:
         self.procs = {}                      # request id -> Popen (for cancel)
         self.stopped = set()                 # request ids the human stopped
         self._init_workspace()
+        try:   # the terminal sessions report card progress with this copy (it knows its workspace)
+            shutil.copy(pathlib.Path(__file__).resolve().parent / 'report.py', self.dir / 'report.py')
+            # every bot works in .atlas/wt/<id>; Claude Code reads CLAUDE.md files from the parent folders,
+            # so a session opened in a terminal knows how to work on the map without anything to paste
+            (self.dir / 'CLAUDE.md').write_text(self.terminal_guide_file(), encoding='utf-8')
+        except OSError:
+            pass
         self.agents = self._read_json('agents.json', {})
         self.settings = {'context_window': CONTEXT_WINDOW, 'handoff_at': 0.85, 'model': model, 'load_user_settings': True, 'git_managed': True,
                          **self._read_json('settings.json', {})}
@@ -228,6 +235,42 @@ class Backend:
         lock = self.locks.setdefault(agent_id, threading.Lock())
         with lock:
             return self._run(a, req, cwd)
+
+    def shorten(self, items):
+        """Cards made before labels existed: turn their long texts into card-sized keywords.
+        One small call (haiku, no tools, no session saved); items = [{id, kind: 'label' | 'verdict', text}]."""
+        items = [i for i in (items or []) if i.get('id') and i.get('text')][:60]
+        if not items:
+            return {'ok': True, 'out': {}}
+        schema = {'type': 'object', 'properties': {'items': {'type': 'array', 'items': {'type': 'object', 'properties': {
+            'id': {'type': 'string'}, 'short': {'type': 'string'}}, 'required': ['id', 'short']}}}, 'required': ['items']}
+        prompt = ("Rewrite each text as a card line of keywords: at most 14 CJK characters or 28 Latin characters, in the same language "
+                  "as the text, no ending punctuation. kind=label says what the approach does (e.g. 'From the FAA/EASA standard'); "
+                  "kind=verdict says the outcome (e.g. 'Extracted · passed', 'Metric failed'). Return every id.\n\n"
+                  + json.dumps([{'id': i['id'], 'kind': i.get('kind', 'label'), 'text': str(i['text'])[:600]} for i in items], ensure_ascii=False))
+        cmd = [CLAUDE, '-p', '--output-format', 'stream-json', '--verbose', '--json-schema', json.dumps(schema),
+               '--model', 'claude-haiku-5-5', '--no-session-persistence', '--setting-sources', '', '--allowedTools', 'StructuredOutput']
+        try:
+            r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=180, cwd=self.ws, **NO_WINDOW)
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}
+        out = {}
+        for line in (r.stdout or '').splitlines():
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            got = None
+            if ev.get('type') == 'assistant':
+                for c in (ev.get('message') or {}).get('content') or []:
+                    if c.get('type') == 'tool_use' and c.get('name') == 'StructuredOutput':
+                        got = c.get('input')
+            elif ev.get('type') == 'result' and isinstance(ev.get('structured_output'), dict):
+                got = ev['structured_output']
+            for it in (got or {}).get('items', []) if isinstance(got, dict) else []:
+                if it.get('id') and it.get('short'):
+                    out[it['id']] = it['short'].strip()
+        return {'ok': bool(out), 'out': out, 'error': '' if out else (r.stderr or 'no answer')[-300:]}
 
     def _run(self, a, req, cwd):
         kind = req['kind']
@@ -464,7 +507,7 @@ class Backend:
         hit = Backend._scan_cache.get(str(f))
         if hit and hit[0] == key:
             return hit[1]
-        info = {'id': f.stem, 'file': str(f), 'title': '', 'ai_title': '', 'cwd': '', 'first': '', 'messages': 0, 'last': '', 'branch': ''}
+        info = {'id': f.stem, 'file': str(f), 'title': '', 'ai_title': '', 'cwd': '', 'first': '', 'messages': 0, 'last': '', 'branch': '', 'orbmap': False}
         try:
             for line in open(f, encoding='utf-8', errors='replace'):
                 if '"custom-title"' in line or '"ai-title"' in line:
@@ -490,6 +533,8 @@ class Backend:
                 text = text.strip()
                 if not text or text.startswith('<') or text.startswith('Caveat:'):
                     continue
+                if not info['orbmap'] and (text.startswith(self.GUIDE_MARK) or any(text.startswith(k[:40]) for k in KIND_PROMPTS.values())):
+                    info['orbmap'] = True                  # orbmap has worked in it (a copy orbmap made, or one it took over)
                 info['messages'] += 1
                 info['last'] = ev.get('timestamp', info['last'])
                 info['branch'] = ev.get('gitBranch', info['branch'])
@@ -511,7 +556,7 @@ class Backend:
         files = [f for d in root.iterdir() if d.is_dir() for f in d.glob('*.jsonl') if f.stat().st_mtime >= cutoff]
         files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
         mine = {a['session'] for a in self.agents.values() if not a.get('imported')}
-        known = {a['session']: k for k, a in self.agents.items()}
+        known = {sid: k for k, a in self.agents.items() for sid in [a.get('origin'), *a.get('previous_sessions', []), a['session']] if sid}
         out = []
         for f in files:
             if len(out) >= limit:
@@ -527,6 +572,75 @@ class Backend:
             out.append({**{k: info[k] for k in ('id', 'name', 'title', 'ai_title', 'cwd', 'first', 'messages', 'last', 'branch', 'file')}, 'agent': known.get(f.stem)})
         return out
 
+    def recent_folders(self, limit=12):
+        """Folders you recently used Claude Code in (newest first). Cheap: per project folder only the first lines
+        of its newest transcript are read, for the folder path."""
+        root = pathlib.Path.home() / '.claude' / 'projects'
+        if not root.exists():
+            return []
+        dirs = []
+        for d in root.iterdir():
+            fs = list(d.glob('*.jsonl')) if d.is_dir() else []
+            if fs:
+                f = max(fs, key=lambda x: x.stat().st_mtime)
+                dirs.append((f.stat().st_mtime, f, len(fs)))
+        dirs.sort(key=lambda x: x[0], reverse=True)
+        out, seen = [], set()
+        for mt, f, n in dirs:
+            cwd = ''
+            try:
+                with open(f, encoding='utf-8', errors='replace') as fh:
+                    for i, line in enumerate(fh):
+                        if i > 40:
+                            break
+                        if '"cwd"' in line:
+                            try:
+                                cwd = json.loads(line).get('cwd', '')
+                            except Exception:
+                                continue
+                            if cwd:
+                                break
+            except OSError:
+                continue
+            if not cwd or '/.atlas/' in cwd.replace(chr(92), '/') + '/' or cwd.lower() in seen:
+                continue
+            seen.add(cwd.lower())
+            out.append({'cwd': cwd, 'sessions': n, 'last': time.strftime('%Y-%m-%d', time.localtime(mt))})
+            if len(out) >= limit:
+                break
+        return out
+
+    def folder_sessions(self, folder):
+        """The Claude Code sessions of one folder and its subfolders (only those transcripts are read)."""
+        root = pathlib.Path.home() / '.claude' / 'projects'
+        folder = str(folder or '').strip().strip('"').rstrip('\\/')
+        if not folder or not root.exists() or re.fullmatch(r'[A-Za-z]:|', folder):
+            return []                                  # empty, or a whole drive (C:\\): not a project folder
+        try:   # the full, real path (also expands short names like USERNA~1)
+            if pathlib.Path(folder).exists():
+                folder = str(pathlib.Path(folder).resolve())
+        except OSError:
+            pass
+        key = re.sub(r'[^A-Za-z0-9]', '-', folder).lower()
+        dirs = [d for d in root.iterdir() if d.is_dir() and (d.name.lower() == key or d.name.lower().startswith(key + '-'))]
+        mine = {a['session'] for a in self.agents.values() if not a.get('imported')}
+        known = {sid: k for k, a in self.agents.items() for sid in [a.get('origin'), *a.get('previous_sessions', []), a['session']] if sid}
+        want = folder.replace(chr(92), '/').lower()
+        out = []
+        for f in sorted((f for d in dirs for f in d.glob('*.jsonl')), key=lambda f: f.stat().st_mtime, reverse=True):
+            if f.stem in mine:
+                continue
+            info = self._scan_session(f)
+            cwd = (info['cwd'] or '').replace(chr(92), '/').lower()
+            if not info['messages'] or (info['messages'] <= 1 and not info['title'] and not info['ai_title']):
+                continue
+            if not (cwd == want or cwd.startswith(want + '/')) or '/.atlas/' in cwd + '/':
+                continue                                   # a different folder whose encoded name looks alike
+            if info.get('orbmap') or any(info['first'].startswith(k[:40]) for k in KIND_PROMPTS.values()):
+                continue                                   # already on an orbmap map (or a copy orbmap made of one)
+            out.append({**{k: info[k] for k in ('id', 'name', 'title', 'ai_title', 'cwd', 'first', 'messages', 'last', 'branch', 'file')}, 'agent': known.get(f.stem)})
+        return out
+
     def import_session(self, agent_id, role, folder, session_id, fork=False):
         """Adopt an existing session as a bot. It keeps its folder; orbmap never moves or rewrites it.
         fork=True: the first turn uses --fork-session, so the original session stays exactly as it was."""
@@ -536,15 +650,230 @@ class Backend:
         self._write_json('agents.json', self.agents)
         return {'ok': True, 'agent': agent_id, 'cwd': self.agents[agent_id]['cwd']}
 
+    def external_activity(self, agent_id):
+        """A session you continue in a terminal: read the tail of its saved transcript (read only) to show
+        what it is doing: seconds since the last write, the last tool, the last words, and its to-do list."""
+        a = self.agents.get(agent_id)
+        if not a or not a.get('session'):
+            return {'ok': False, 'error': 'no session'}
+        root = pathlib.Path.home() / '.claude' / 'projects'
+        hits = list(root.glob(f"*/{a['session']}.jsonl")) if root.exists() else []
+        if not hits:
+            return {'ok': False, 'error': 'transcript not found'}
+        f = max(hits, key=lambda x: x.stat().st_mtime)
+        st = f.stat()
+        with open(f, 'rb') as fh:
+            start = max(0, st.st_size - 400_000)
+            fh.seek(start)
+            tail = fh.read().decode('utf-8', errors='replace').splitlines()[1 if start else 0:]
+        text = tool = ''
+        todos, tasks, order = None, {}, []
+        for line in tail:
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            if ev.get('type') != 'assistant':
+                continue
+            for c in (ev.get('message') or {}).get('content') or []:
+                if c.get('type') == 'text' and c.get('text', '').strip():
+                    text = c['text'].strip()
+                elif c.get('type') == 'tool_use':
+                    inp = c.get('input') or {}
+                    name = c.get('name', '')
+                    tool = f"{name} {_brief(inp)}".strip()
+                    if name == 'TodoWrite' and isinstance(inp.get('todos'), list):
+                        todos = [{'content': t.get('content', ''), 'status': t.get('status', 'pending')} for t in inp['todos']]
+                    elif name == 'TaskCreate' and inp.get('subject'):
+                        k = str(len(order) + 1)
+                        order.append(k)
+                        tasks[k] = {'content': inp['subject'], 'status': 'pending'}
+                    elif name == 'TaskUpdate' and str(inp.get('taskId', '')) in tasks and inp.get('status'):
+                        tasks[str(inp['taskId'])]['status'] = inp['status']
+        if todos is None and order:
+            todos = [tasks[k] for k in order if tasks[k]['status'] != 'deleted']
+        return {'ok': True, 'age': round(time.time() - st.st_mtime, 1), 'text': text[:600], 'tool': tool[:160], 'todos': (todos or [])[:12]}
+
     def session_command(self, agent_id):
-        """The command to continue this bot's session yourself (terminal or VS Code)."""
+        """The command to continue this bot's session yourself (terminal or VS Code). It adds a short system note:
+        orbmap mirrors this chat, and how to report a card's progress (app/report.py) so the map stays current."""
         a = self.agents.get(agent_id)
         if not a:
             return {'ok': False, 'error': 'This bot has not talked to Claude yet.'}
-        # PowerShell (the default terminal in VS Code on Windows) and bash both understand this form
-        cmd = (f'Set-Location "{a["cwd"]}"; claude --resume {a["session"]}' if os.name == 'nt'
-               else f'cd "{a["cwd"]}" && claude --resume {a["session"]}')
+        # the guide is a file; the first message of the resumed session asks the bot to read it (--append-system-prompt is
+        # ignored when resuming, and Windows PowerShell 5.1 mangles double quotes inside native arguments, so the message has none)
+        gdir = self.dir / 'guide'
+        gdir.mkdir(exist_ok=True)
+        gfile = gdir / f'{agent_id}.md'
+        gfile.write_text('# orbmap guide' + chr(10) * 2 + self.report_guide(agent_id).replace('. ', '.' + chr(10)), encoding='utf-8')
+        extra = f" '{self.GUIDE_MARK} Read the file {gfile} now and follow it for the rest of this session. Reply with only: OK'"
+        if os.name == 'nt':
+            cmd = f"Set-Location \"{a['cwd']}\"; claude --resume {a['session']}{extra}"
+        else:
+            cmd = f"cd \"{a['cwd']}\" && claude --resume {a['session']}{extra}"
         return {'ok': True, 'cwd': a['cwd'], 'session': a['session'], 'command': cmd}
+
+    def terminal_guide_file(self):
+        py = pathlib.Path(sys.executable)
+        if py.name.lower() == 'pythonw.exe':
+            py = py.with_name('python.exe')
+        r = f'"{py}" "{self.dir / "report.py"}" --from <your id>'
+        return f"""# orbmap
+
+You are one session on an orbmap map (goal → sub-goals → tasks → steps / approaches). Your id is the name of the folder
+you work in under `.atlas/wt/` (for example `.atlas/wt/T-3` → `T-3`).
+
+**In a terminal or in VS Code there is no StructuredOutput tool: never call it.** (Only when a message from the orbmap app
+itself asks for structured output with `say` and `actions` do you have that tool.)
+
+When the human talks to you in a terminal or in VS Code, that chat counts exactly like the orbmap chat. Anything the human
+could do on the map (an approach or hypothesis, a step, a task, a card status, adopt, run, finish, approve, asking or telling
+another bot or MC) you do with the commands below, then say what you changed. Never answer that you cannot, and do not ask
+the human to press a button you can press yourself.
+
+- See the map first: `{r} context`
+- Card status (also whenever you start, finish or get blocked on a card):
+  `{r} <card> <running|done|blocked|passed|failed> "<verdict: keywords, at most 14 CJK or 28 Latin characters>" "<one-sentence summary>"`
+- New approach: `{r} approach <card> "<title>" "<label keywords>" "<idea>"`
+- New step: `{r} step <card> "<title>"`
+- New task: `{r} task <sub-goal> "<title>"`
+- Press a card's button, as in orbmap: `{r} <adopt|run|validate|retract|fold|finish|approve|sendback|tick> <card>`
+  (adopt an approach, run a task or step, validate an approach, finish a task, approve or send back a gate, tick a checklist item)
+- Ask: `{r} ask <MC|bot|card> "<question>"`, then read answers with `{r} replies`
+- Tell: `{r} tell <MC|bot|card> "<note>"`
+- Anything else (orbmap action JSON in a file): `{r} act <file.json>`
+
+orbmap applies these within a few seconds; tell the human what you changed.
+"""
+
+    GUIDE_MARK = '[orbmap guide]'
+
+    def report_guide(self, agent_id=None):
+        """What a session opened in a terminal or VS Code needs to work exactly as in the orbmap chat. It is sent as the first
+        message of the resumed session (--append-system-prompt does not apply to a resumed session)."""
+        py = pathlib.Path(sys.executable)
+        if py.name.lower() == 'pythonw.exe':
+            py = py.with_name('python.exe')
+        me = agent_id or 'MC'
+        r = f'"{py}" "{self.dir / "report.py"}" --from {me}'
+        return (f'{self.GUIDE_MARK} You are {me} in orbmap (a map of sessions: goal, sub-goals, tasks, steps, approaches). '
+                f'Two kinds of messages reach you. (1) A message that contains the headings "## Context" and "## Message" comes from the orbmap app: '
+                f'answer it with the StructuredOutput tool (say + actions), exactly as before. (2) Everything else is the human talking to you in a '
+                f'terminal or VS Code; there you have no StructuredOutput tool, so never call it there, and do everything on the map with the commands below, '
+                f'never answering that you cannot or asking the human to press a button. '
+                f'See the map first: {r} context. '
+                f'Card status (also whenever you start, finish or get blocked on a card): {r} <card> <running|done|blocked|passed|failed> "<verdict: keywords, at most 14 CJK or 28 Latin characters>" "<one-sentence summary>". '
+                f'New approach (an alternative or hypothesis): {r} approach <card> "<title>" "<label keywords>" "<idea>". New step: {r} step <card> "<title>". '
+                f'New task: {r} task <sub-goal> "<title>". Card buttons: {r} adopt|run|validate|retract|fold|finish|approve|sendback|tick <card>. Skip a step, hold it for later or put it back: {r} skip|hold|resume <step>. '
+                f'Talk: {r} ask <MC|bot|card> "<question>", {r} tell <MC|bot|card> "<note>". '
+                f'After any command wait a few seconds and run {r} replies: it shows answers and anything orbmap could not do (then tell the human). '
+                f'Check with context that a card exists before you act on it. Before acting on a card another bot owns, say so and ask the human, or tell that bot. '
+                f'Anything else as orbmap action JSON in a file: {r} act <file.json>. '
+                f'When the human wants to go back to orbmap: tell them to type /exit here (or close the window), then press Take back (step 4) in the left panel of orbmap. '
+                f'Reply to this guide with only: OK.')
+
+    def join_text(self):
+        py = pathlib.Path(sys.executable)
+        if py.name.lower() == 'pythonw.exe':
+            py = py.with_name('python.exe')
+        return (f'[orbmap join] Please add this session to my orbmap map: run this command now, with a short title (a few words) that '
+                f'describes what you work on in this session: "{py}" "{self.dir / "report.py"}" join "<short title>". Then tell me it is done.')
+
+    def sessions_open_elsewhere(self):
+        """Bots whose session is open right now in a terminal or VS Code (a claude process resuming it that orbmap did not start)."""
+        ids = {a['session']: k for k, a in self.agents.items() if a.get('session') and not a.get('fork_pending')}
+        mine = {p.pid for p in self.procs.values() if p.poll() is None}
+        found = {}
+        for pid, line in claude_cmdlines():
+            if pid in mine:
+                continue
+            for sid, agent in ids.items():
+                if sid in line:
+                    found[agent] = pid
+        return {'ok': True, 'open': found}
+
+    def sessions_running(self, ids):
+        """Of these session ids, the ones a claude process (terminal or VS Code, not orbmap) has open right now."""
+        ids = [str(i) for i in (ids or []) if i]
+        lines = [line for _, line in claude_cmdlines(0)]
+        return {'ok': True, 'open': sorted(i for i in ids if any(i in line for line in lines))}
+
+    def write_context(self, agent_id, text):
+        """The map as this bot sees it in the orbmap chat; `report.py --from <id> context` prints it in the terminal."""
+        d = self.dir / 'context'
+        d.mkdir(exist_ok=True)
+        (d / f'{agent_id}.md').write_text(str(text), encoding='utf-8')
+        return {'ok': True}
+
+    def post_reply(self, to_agent, frm, text, about=''):
+        """An answer for a bot that asked from a terminal; `report.py --from <id> replies` prints it."""
+        d = self.dir / 'outbox'
+        d.mkdir(exist_ok=True)
+        with open(d / f'{to_agent}.jsonl', 'a', encoding='utf-8') as f:
+            f.write(json.dumps({'t': time.time(), 'from': frm, 'text': text, 'about': about}, ensure_ascii=False) + '\n')
+        return {'ok': True}
+
+    def external_transcript(self, agent_id, since=0):
+        """What was said in a handed-back session after `since` (epoch seconds): your messages and its replies (read only)."""
+        a = self.agents.get(agent_id)
+        if not a or not a.get('session'):
+            return {'ok': False, 'items': []}
+        root = pathlib.Path.home() / '.claude' / 'projects'
+        hits = list(root.glob(f"*/{a['session']}.jsonl")) if root.exists() else []
+        if not hits:
+            return {'ok': False, 'items': []}
+        f = max(hits, key=lambda x: x.stat().st_mtime)
+        size = f.stat().st_size
+        with open(f, 'rb') as fh:
+            start = max(0, size - 1_500_000)
+            fh.seek(start)
+            lines = fh.read().decode('utf-8', errors='replace').splitlines()[1 if start else 0:]
+        from datetime import datetime
+        items = []
+        for line in lines:
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            if ev.get('type') not in ('user', 'assistant') or ev.get('isMeta') or ev.get('isSidechain'):
+                continue
+            try:
+                ts = datetime.fromisoformat(str(ev.get('timestamp', '')).replace('Z', '+00:00')).timestamp()
+            except Exception:
+                continue
+            if ts <= since:
+                continue
+            content = (ev.get('message') or {}).get('content')
+            if isinstance(content, str):
+                text = content
+            else:
+                text = '\n'.join(c.get('text', '') for c in (content or []) if isinstance(c, dict) and c.get('type') == 'text')
+            text = text.strip()
+            if not text or text.startswith('<') or text.startswith('Caveat:'):
+                continue
+            if ev['type'] == 'user' and (any(text.startswith(k[:40]) for k in KIND_PROMPTS.values()) or text.startswith(self.GUIDE_MARK)):
+                continue                                   # orbmap's own requests and the guide, not yours
+            items.append({'id': ev.get('uuid', ''), 'role': ev['type'], 'text': text[:4000], 't': ts})
+        return {'ok': True, 'items': items[-60:]}
+
+    def read_inbox(self, offset=0):
+        """Card reports written by app/report.py since byte `offset`."""
+        f = self.dir / 'inbox.jsonl'
+        if not f.exists():
+            return {'ok': True, 'items': [], 'offset': 0}
+        size = f.stat().st_size
+        if offset > size:
+            offset = 0
+        with open(f, 'rb') as fh:
+            fh.seek(offset)
+            raw = fh.read()
+        items = []
+        for line in raw.decode('utf-8', errors='replace').splitlines():
+            try:
+                items.append(json.loads(line))
+            except Exception:
+                pass
+        return {'ok': True, 'items': items, 'offset': offset + len(raw)}
 
     # ---------- attachments (pasted / dropped files) ----------
     def save_attachment(self, name, data_url):
@@ -632,6 +961,34 @@ def _fallback(kind, text):
     if kind == 'resume_from_handoff':
         return {'say': text}
     return None
+
+
+_CLAUDE_PROCS = {'t': 0, 'list': []}
+
+
+def claude_cmdlines(max_age=3.0):
+    """Command lines of the running claude processes that orbmap did not start with -p (cached a few seconds).
+    Only processes named claude* are asked for their command line (asking every process is slow on Windows)."""
+    now = time.time()
+    if now - _CLAUDE_PROCS['t'] < max_age:
+        return _CLAUDE_PROCS['list']
+    out = []
+    try:
+        import psutil
+    except ImportError:
+        return out
+    for p in psutil.process_iter(['pid', 'name']):
+        try:
+            if not (p.info['name'] or '').lower().startswith('claude'):
+                continue
+            cmd = p.cmdline()
+            if '-p' in cmd or '--print' in cmd:
+                continue
+            out.append((p.info['pid'], ' '.join(cmd)))
+        except Exception:
+            continue
+    _CLAUDE_PROCS.update(t=now, list=out)
+    return out
 
 
 def _brief(inp):

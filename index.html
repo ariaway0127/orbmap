@@ -95,10 +95,14 @@
     .apple-bento-card.dragging { --tier: var(--el-3); --fx: 0 40px 80px -20px rgba(0,0,0,.9); }
     /* three zoom levels: near shows everything / mid keeps title, status, progress / far keeps only a large title and the status color */
     .lod-detail, #world-layer .apple-bento-card > * { transition: opacity .24s cubic-bezier(.16, 1, .3, 1), transform .24s cubic-bezier(.16, 1, .3, 1); }
-    #world-layer[data-lod="mid"] .lod-detail, #world-layer[data-lod="far"] .lod-detail { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+    /* hidden details leave the flow, so the bigger title has room (the card's height is held, nothing on the canvas moves) */
+    #world-layer[data-lod="mid"] .lod-detail, #world-layer[data-lod="far"] .lod-detail { opacity: 0; transform: translateY(-4px); pointer-events: none; position: absolute; visibility: hidden; }
     /* the card keeps the height it had up close, so a bigger title or hidden details never push the layout (no jitter) */
-    #world-layer[data-lod="mid"] .apple-bento-card[style*="--near-h"], #world-layer[data-lod="far"] .apple-bento-card[style*="--near-h"] { height: var(--near-h); overflow: hidden; }
-    #world-layer[data-lod="mid"] .apple-bento-card h3 { font-size: min(calc(14px / var(--z, 0.6)), 28px); line-height: 1.2; }
+    #world-layer[data-lod="far"] .apple-bento-card[style*="--near-h"] { height: var(--near-h); overflow: hidden; }
+    /* mid: the card keeps at least its up-close height; a title that grew may extend it a little downward (into the gap), never cut its buttons */
+    #world-layer[data-lod="mid"] .apple-bento-card[style*="--near-h"] { min-height: var(--near-h); }
+    #world-layer[data-lod="mid"] .apple-bento-card h3 { font-size: min(calc(14px / var(--zt, 0.6)), 28px); line-height: 1.2; }
+    #world-layer[data-lod="mid"] .apple-bento-card h3, #world-layer[data-lod="far"] .apple-bento-card h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; }
     #world-layer[data-lod="far"] .apple-bento-card > :first-child { opacity: 0; pointer-events: none; }
     #world-layer[data-lod="far"] .apple-bento-card.tier-step { opacity: 1; background: rgba(255,255,255,.06); }
     #world-layer[data-lod="far"] .apple-bento-card.tier-step.state-done { background: rgba(48,209,88,.24); }
@@ -126,7 +130,7 @@
     #drawer-breadcrumb { font-family: inherit; font-size: 12px; }
     /* semantic zoom: far out, cards keep only the header and a large title */
     #world-layer[data-lod="far"] .apple-bento-card > :not(h3):not(:first-child) { opacity: 0; pointer-events: none; }
-    #world-layer[data-lod="far"] .apple-bento-card h3 { font-size: min(calc(13px / var(--z, 0.4)), 64px); line-height: 1.15; }
+    #world-layer[data-lod="far"] .apple-bento-card h3 { font-size: min(calc(13px / var(--zt, 0.4)), 56px); line-height: 1.15; }
     #world-layer[data-lod="far"] .apple-bento-card { border-width: 2px; }
     #world-layer[data-lod="far"] .apple-bento-card.state-passed, #world-layer[data-lod="far"] .apple-bento-card.state-done { background: rgba(48,209,88,.16); }
     #world-layer[data-lod="far"] .apple-bento-card.state-running { background: rgba(100,210,255,.16); }
@@ -361,6 +365,29 @@
       body.drawer-open > #board-tabs { left: calc((100vw - var(--dw) - 32px) / 2); max-width: calc(100vw - var(--dw) - 64px); }
     }
     #status-right { overflow: hidden; }
+    :root { --cw: 400px; }
+    body.panels-split #card-panel { display: flex; }
+    body.panels-split.drawer-open > header { left: calc((100vw + var(--cw) - var(--dw)) / 2); width: calc(100vw - var(--cw) - var(--dw) - 96px); }
+    body.panels-split.drawer-open > #dock { left: calc((100vw + var(--cw) - var(--dw)) / 2); max-width: calc(100vw - var(--cw) - var(--dw) - 96px); }
+    body.panels-split.drawer-open > #board-tabs { left: calc((100vw + var(--cw) - var(--dw)) / 2); max-width: calc(100vw - var(--cw) - var(--dw) - 96px); }
+    body.panels-split.drawer-open #minimap { left: calc(var(--cw) + 32px); }
+    body.panels-split #drawer-split { display: none; }
+    body.panels-split #chat-head { display: flex; }
+    #card-panel #drawer-actions { max-height: none !important; flex: 1 1 auto; }
+    body.panels-split.fold-left #card-panel { transform: translateX(-115%) !important; }
+    body.fold-right #node-drawer { transform: translateX(115%) !important; }
+    body.panels-split.fold-left { --cw: -32px; }
+    body.fold-right { --dw: -32px; }
+    body.panels-split.drawer-open.fold-left #minimap { left: 1rem; }
+    .fold-btn { position: fixed; top: 84px; z-index: 51; width: 22px; height: 44px; display: none; align-items: center; justify-content: center;
+      border-radius: 999px; background: rgba(18,20,27,0.92); border: 1px solid rgba(255,255,255,0.14); color: #d4d4d8; font-size: 12px; backdrop-filter: blur(12px); transition: left .5s cubic-bezier(0.22,1,0.36,1), right .5s cubic-bezier(0.22,1,0.36,1); }
+    .fold-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    body.panels-split.drawer-open #fold-left { display: flex; left: calc(var(--cw) + 5px); }
+    body.panels-split.drawer-open.fold-left #fold-left { left: 6px; }
+    @media (min-width: 640px) { body.drawer-open #fold-right { display: flex; right: calc(var(--dw) + 5px); } body.drawer-open.fold-right #fold-right { right: 6px; } }
+    body.has-live #minimap { bottom: 3.25rem; }
+    body.panels-split.drawer-open:not(.fold-left) #live-badge { left: calc(var(--cw) + 32px); }
+    #card-panel #drawer-pin { max-height: 45%; }
     @media (max-width: 1535px) { #status-right .sb-minor { display: none; } }
     @media (max-width: 639px) { #toast-stack { top: auto; bottom: 140px; } }
 
@@ -397,12 +424,12 @@
       </div>
       <div id="dynamic-island-bots" class="flex items-center gap-1.5 overflow-x-auto py-0.5 min-w-0"></div>
       <div class="flex items-center gap-1.5 shrink-0">
-        <span id="save-indicator" class="hidden xl:inline font-mono-sf text-[10px] text-zinc-500">Saved</span>
+        <span id="save-indicator" class="hidden xl:inline-block w-[7ch] text-right shrink-0 font-mono-sf text-[10px] text-zinc-500">Saved</span>
         <button id="btn-local-arch" class="px-3 py-1.5 rounded-full text-[11px] font-medium text-zinc-200 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] transition flex items-center gap-1.5" title="Project state JSON and local wiring">
           <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
           <span class="hidden md:inline">Local setup</span>
         </button>
-        <button id="btn-away" data-act="open-away" class="px-3 py-1.5 rounded-full text-[11px] font-medium text-zinc-200 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] transition" title="Away mode: what happened while I was gone (L)">Away</button>
+        <button id="btn-away" data-act="open-away" class="px-3 py-1.5 rounded-full text-[11px] font-medium text-zinc-200 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] transition" title="Dashboard: what the bots did while you were away, and what needs you (L)">📊 Dashboard</button>
         <button id="btn-example" class="px-3 py-1.5 rounded-full text-[11px] font-medium text-zinc-200 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] transition" title="Load the full example: launching a new app">Example</button>
         <button id="btn-new-goal" class="px-3 py-1.5 rounded-full text-[11px] font-medium text-zinc-300 hover:text-white bg-white/[0.05] hover:bg-rose-500/20 border border-white/[0.08] hover:border-rose-400/40 transition">New goal</button>
       </div>
@@ -471,7 +498,11 @@
   <aside id="node-drawer" class="fixed top-10 right-4 bottom-4 z-50 w-[calc(100vw-2rem)] sm:w-[440px] rounded-[26px] bg-[#12141B]/90 backdrop-blur-3xl border border-white/[0.12] shadow-[0_32px_80px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.16)] transform translate-x-[115%] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] flex flex-col overflow-hidden">
     <div id="drawer-resize" role="separator" aria-orientation="vertical" aria-label="Resize the side panel" title="Drag to resize · double-click to reset"
       class="hidden sm:block absolute left-0 top-6 bottom-6 w-2 z-10 cursor-col-resize group touch-none"><span class="absolute left-[2px] top-1/2 -translate-y-1/2 w-1 h-12 rounded-full bg-white/15 group-hover:bg-white/40 transition-colors"></span></div>
-    <div class="px-5 pt-4 pb-3 border-b border-white/[0.08] shrink-0">
+    <div id="chat-head" class="hidden px-5 py-3 border-b border-white/[0.08] shrink-0 items-center gap-2">
+      <span class="text-[15px]">💬</span><div class="min-w-0 flex-1"><div class="font-mono-sf text-[10.5px] text-zinc-500">CHAT</div><div id="chat-head-title" class="text-[14px] font-semibold text-white truncate"></div></div>
+      <button id="btn-close-chat" class="w-7 h-7 rounded-full bg-white/[0.07] hover:bg-white/[0.14] text-zinc-300 hover:text-white flex items-center justify-center text-xs transition" title="Close (Esc)">✕</button>
+    </div>
+    <div id="drawer-head" class="px-5 pt-4 pb-3 border-b border-white/[0.08] shrink-0">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0 flex-1">
           <div id="drawer-breadcrumb" class="font-mono-sf text-[11px] text-zinc-400 truncate mb-1"></div>
@@ -528,6 +559,14 @@
       </form>
       </div>
     </div>
+  </aside>
+
+  <!-- CARD PANEL (left): the card or bot you opened; the chat stays on the right -->
+  <button id="fold-left" class="fold-btn" title="Hide the left panel (it stays hidden until you open it again)">‹</button>
+  <button id="fold-right" class="fold-btn" title="Hide the chat panel (it stays hidden until you open it again)">›</button>
+  <aside id="card-panel" class="hidden fixed top-10 left-4 bottom-4 z-50 w-[400px] rounded-[26px] bg-[#12141B]/90 backdrop-blur-3xl border border-white/[0.12] shadow-[0_32px_80px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.16)] transform -translate-x-[115%] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] flex-col overflow-hidden">
+    <div id="card-resize" role="separator" aria-orientation="vertical" aria-label="Resize the card panel" title="Drag to resize · double-click to reset"
+      class="absolute right-0 top-6 bottom-6 w-2 z-10 cursor-col-resize group touch-none"><span class="absolute right-[2px] top-1/2 -translate-y-1/2 w-1 h-12 rounded-full bg-white/15 group-hover:bg-white/40 transition-colors"></span></div>
   </aside>
 
   <!-- ONE-PAGE REPORT -->
@@ -1069,12 +1108,90 @@
     const alias = { checklist: 'audit', validation: 'audit', matrix: 'audit', boxplot: 'distribution', kpi: 'metric', number: 'metric', image: 'compare', beforeafter: 'compare', scatter: 'parity', note: 'text' };
     return { ...r, type: RESULT_TEMPLATES[t] ? t : alias[t] || 'text' };
   }
+  // card text rule: show it only if it fits one line of the card (CJK counts double); otherwise show nothing
+  function clipLine(t, units = 46) {
+    const s = String(t || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+    let u = 0, out = '';
+    for (const ch of s) { const w = /[\u1100-\uffff]/.test(ch) ? 2 : 1; if (u + w > units - 1) return out + '…'; u += w; out += ch; }
+    return out;
+  }
+  function fitLine(t, units = 46) {
+    const s = String(t || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+    if (!s) return '';
+    let u = 0;
+    for (const ch of s) u += /[\u1100-\uffff]/.test(ch) ? 2 : 1;
+    return u <= units ? s : '';
+  }
+  function stepResultLine(n) {
+    if (!n.result) return '';
+    const blocked = /^(Blocked|Stopped)/.test(n.result);
+    const t = fitLine(n.verdict) || fitLine(n.result) || (blocked ? n.result.split(':')[0] : '');
+    return t ? `<div class="text-[10.5px] ${blocked ? 'text-rose-300' : 'text-emerald-200'} mt-0.5 truncate" title="${esc(n.result)}">${esc(t)}</div>` : '';
+  }
+  // first sentence of a long text, at most ~90 characters
+  function oneLine(t) {
+    const s = String(t || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+    const m = s.match(/^.+?[。！？!?](?=\s|$)|^.+?\.(?=\s)/);
+    const first = (m ? m[0] : s).trim();
+    return first.length > 90 ? `${first.slice(0, 88)}…` : first;
+  }
+  // a floating window with the whole result: drag the header, resize from the corner, A− / A+ (or Ctrl + wheel) to zoom
+  let rvScale = 1;
+  function openResultView(id) {
+    const n = state.nodes[id];
+    if (!n || !(n.contract || n.resultData)) return;
+    let w = $('result-viewer');
+    if (!w) {
+      w = document.createElement('div');
+      w.id = 'result-viewer';
+      w.className = 'fixed z-[56] rounded-2xl bg-[#14161D] border border-white/[0.14] shadow-[0_24px_80px_rgba(0,0,0,0.9)] flex flex-col';
+      w.style.cssText = 'left:calc(50vw - 340px);top:120px;width:680px;height:440px;min-width:280px;min-height:160px;max-width:96vw;max-height:88vh;resize:both;overflow:hidden;';
+      w.innerHTML = `<div id="rv-head" class="px-4 py-2.5 border-b border-white/[0.08] flex items-center gap-2 cursor-move select-none">
+          <div class="min-w-0 flex-1"><div id="rv-kicker" class="font-mono-sf text-[10px] text-zinc-500"></div><div id="rv-title" class="text-[13px] font-semibold text-white truncate"></div></div>
+          <button data-rv="-" class="${btnCls.ghost}" title="Smaller (Ctrl + wheel)">A−</button><span id="rv-pct" class="font-mono-sf text-[11px] text-zinc-400 w-10 text-center"></span><button data-rv="+" class="${btnCls.ghost}" title="Bigger (Ctrl + wheel)">A+</button>
+          <button data-rv="x" class="${btnCls.ghost}" title="Close (Esc)">✕</button></div>
+        <div id="rv-body" class="flex-1 overflow-auto p-4"><div id="rv-zoom"></div></div>`;
+      document.body.appendChild(w);
+      const head = w.querySelector('#rv-head');
+      head.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button')) return;
+        const r = w.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+        head.setPointerCapture(e.pointerId);
+        const mv = (ev) => { w.style.left = `${Math.max(0, Math.min(innerWidth - 80, ev.clientX - dx))}px`; w.style.top = `${Math.max(0, Math.min(innerHeight - 40, ev.clientY - dy))}px`; };
+        const up = () => { head.removeEventListener('pointermove', mv); head.removeEventListener('pointerup', up); };
+        head.addEventListener('pointermove', mv); head.addEventListener('pointerup', up);
+      });
+      w.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-rv]');
+        if (!b) return;
+        if (b.dataset.rv === 'x') { w.remove(); return; }
+        setRvScale(rvScale * (b.dataset.rv === '+' ? 1.2 : 1 / 1.2));
+      });
+      w.addEventListener('wheel', (e) => { e.stopPropagation(); if (!e.ctrlKey) return; e.preventDefault(); setRvScale(rvScale * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); }, { passive: false });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('result-viewer')) $('result-viewer').remove(); });
+    }
+    w.dataset.node = id;
+    $('rv-kicker').textContent = `RESULT · ${n.id}`;
+    $('rv-title').textContent = n.title;
+    $('rv-zoom').innerHTML = resultHtml(n, true, true).replace('lod-detail ', '');
+    setRvScale(rvScale);
+  }
+  function setRvScale(v) {
+    rvScale = Math.max(0.6, Math.min(3, v));
+    const z = $('rv-zoom'); if (z) z.style.zoom = String(rvScale);
+    const p = $('rv-pct'); if (p) p.textContent = `${Math.round(rvScale * 100)}%`;
+  }
   // the step card / side panel block: wireframe before, real data after, one-line badge
-  function resultHtml(n, full = false) {
+  function resultHtml(n, full = false, viewer = false) {
     const c = n.contract || (n.resultData ? { type: n.resultData.type } : null);
     if (!c) return '';
     const T = RESULT_TEMPLATES[c.type] || RESULT_TEMPLATES.text;
     const done = ['done', 'passed', 'failed'].includes(n.status) && n.resultData;   // steps are done; approaches pass or fail
+    if (['done', 'passed', 'failed'].includes(n.status) && !n.resultData) {
+      const v = fitLine(n.verdict) || (n.check && fitLine(n.check.text)) || (n.status === 'failed' ? 'Failed' : 'Done');
+      const ok2 = n.status !== 'failed' && !(n.check && n.check.ok === false);
+      return `<div class="mt-1.5 text-[10.5px] truncate ${ok2 ? 'text-emerald-300' : 'text-amber-300'}" title="${esc(n.result || v)}">${ok2 ? '● ' : '▲ '}${esc(v)}</div>`;
+    }
     let body = '';
     try { body = done ? T.render(c, n.resultData, full) : T.wireframe(c, full); } catch (e) { body = `<div class="text-[10px] text-zinc-500">(could not draw the ${esc(T.label)})</div>`; }
     const ok = n.check ? n.check.ok : true;
@@ -1082,7 +1199,7 @@
       : n.status === 'running' || n.status === 'validating' ? `Running · will report as ${T.label}` : `Will report as ${T.label}${c.target ? ` · target ${c.target}` : ''}`;
     if (done && badge && body.includes(esc(badge))) badge = 'Done';   // the result already says it
     return `<div class="lod-detail mt-1.5 rounded-xl border p-1.5 ${done ? 'bg-black/35 border-white/[0.08]' : `border-dashed border-white/15 bg-white/[0.02] ${n.status === 'running' || n.status === 'validating' ? 'rt-running' : ''}`}">${body}
-      <div class="mt-1 text-[10px] truncate ${done ? (ok ? 'text-emerald-300' : 'text-amber-300') : 'text-zinc-500'}" title="${esc(badge)}">${done ? (ok ? '● ' : '▲ ') : '◌ '}${esc(badge)}</div></div>`;
+      <div class="mt-1 flex items-center gap-1.5"><div class="flex-1 min-w-0 text-[10px] truncate ${done ? (ok ? 'text-emerald-300' : 'text-amber-300') : 'text-zinc-500'}" title="${esc(badge)}">${done ? (ok ? '● ' : '▲ ') : '◌ '}${esc(badge)}</div>${viewer ? '' : `<button data-act="result-view" data-id="${n.id}" title="Open the whole result in a window you can move, resize and zoom" class="shrink-0 px-1.5 rounded-md text-[12px] leading-none text-zinc-400 hover:text-white hover:bg-white/10">⤢</button>`}</div></div>`;
   }
   // side panel: switch the template before the step runs
   function resultTypePicker(n) {
@@ -1415,6 +1532,35 @@
   const visibleNodes = () => Object.values(state.nodes).filter(n => !isStation(n) && !isHidden(n));
 
   // the bot in charge of a card: its own or the nearest ancestor’s (steps run on their container’s bot); goal / sub-goals without a bot → MC
+  // one bot = one session = one chat: every card a bot owns shows that bot's single conversation
+  function chatNode(n, s = state) {
+    let x = n;
+    while (x && x.tier !== 'goal' && x.tier !== 'subgoal') {
+      if (x.botId) return x;
+      x = s.nodes[x.parentId];
+    }
+    return n;
+  }
+  function linkChats(s = state) {
+    if (!s || !s.nodes) return;
+    Object.values(s.nodes).forEach(n => {
+      if (!n || n.tier === 'goal' || n.tier === 'subgoal') return;
+      const home = chatNode(n, s);
+      if (home === n || n._chatOf === home.id) return;
+      const own = Object.prototype.hasOwnProperty.call(n, 'messages') && !n._chatOf ? n.messages : null;
+      if (!Array.isArray(home.messages)) home.messages = [];
+      if (own && own.length) {   // what was said on this card before moves into the one conversation
+        home.messages.push({ sender: 'system', text: `── earlier on ${n.id} “${n.title}” ──` }, ...own);
+      }
+      const hid = home.id;
+      Object.defineProperty(n, 'messages', {
+        configurable: true, enumerable: false,
+        get() { const hm = s.nodes[hid]; return hm ? hm.messages : []; },
+        set(v) { const hm = s.nodes[hid]; if (hm && Array.isArray(v) && v.length) hm.messages.push(...v); },
+      });
+      Object.defineProperty(n, '_chatOf', { configurable: true, enumerable: false, writable: true, value: hid });
+    });
+  }
   function ownerBot(nodeId) {
     let n = state.nodes[nodeId];
     while (n && n.tier !== 'goal') {
@@ -1485,6 +1631,7 @@
   /* ---------------- Persistence ---------------- */
   let saveTimer = null;
   function save() {
+    linkChats();
     clearTimeout(saveTimer);
     const ind = $('save-indicator');
     if (ind) ind.textContent = 'Saving…';
@@ -1618,16 +1765,59 @@
     save();
   }
 
+  /* ---------------- Two panels: card (left) and chat (right) ---------------- */
+  const SPLIT_MIN = 1100;
+  const isSplit = () => document.body.classList.contains('panels-split');
+  const panelFold = (() => { try { return JSON.parse(localStorage.getItem('orbmap.panelFold') || '{}') || {}; } catch (e) { return {}; } })();
+  function applyPanelFold() {
+    document.body.classList.toggle('fold-left', !!panelFold.left);
+    document.body.classList.toggle('fold-right', !!panelFold.right);
+    const l = $('fold-left'), r = $('fold-right');
+    if (l) { l.textContent = panelFold.left ? '›' : '‹'; l.title = panelFold.left ? 'Show the left panel' : 'Hide the left panel (it stays hidden until you open it again)'; }
+    if (r) { r.textContent = panelFold.right ? '‹' : '›'; r.title = panelFold.right ? 'Show the chat' : 'Hide the chat panel (it stays hidden until you open it again)'; }
+  }
+  function togglePanelFold(side) {
+    panelFold[side] = !panelFold[side];
+    try { localStorage.setItem('orbmap.panelFold', JSON.stringify(panelFold)); } catch (e) { /* this browser keeps no storage */ }
+    applyPanelFold(); updateNarrow();
+  }
+  function layoutPanels() {
+    const split = window.innerWidth >= SPLIT_MIN;
+    const cp = $('card-panel'), dr = $('node-drawer');
+    if (!cp || !dr) return;
+    document.body.classList.toggle('panels-split', split);
+    const parts = ['drawer-head', 'drawer-pin', 'drawer-actions'].map(id => $(id));
+    if (split && parts[0].parentElement !== cp) parts.forEach(el => cp.appendChild(el));
+    if (!split && parts[0].parentElement !== dr) { const at = $('drawer-split'); parts.forEach(el => dr.insertBefore(el, at)); }
+    showCardPanel(!!(state && state.drawerOpen));
+    applyPanelFold();
+    updateNarrow();
+  }
+  function showCardPanel(on) {
+    const cp = $('card-panel');
+    if (cp) cp.classList.toggle('-translate-x-[115%]', !(on && isSplit()));
+  }
+  function setChatHead() {
+    const t = $('chat-head-title');
+    if (!t || !state) return;
+    const mc = isMC(), bm = isBotView();
+    const b = bm ? botById(state.selectedBotId) : null;
+    const n = mc ? null : state.nodes[state.selectedNodeId];
+    const ob = n ? ownerBot(n.id) : null;
+    t.textContent = mc ? 'MC · Model Controller' : bm ? `${b ? b.id : 'Bot'}${b ? ` · ${botRole(b)}` : ''}` : `${ob ? ob.id : 'MC'} · ${n ? n.title : ''}`;
+  }
+
   /* ---------------- Camera ---------------- */
   function updateNarrow() {
-    const dw = state && state.drawerOpen && window.innerWidth >= 640 ? $('node-drawer').offsetWidth + 32 : 0;
+    const dw = (state && state.drawerOpen && window.innerWidth >= 640 && !panelFold.right ? $('node-drawer').offsetWidth + 32 : 0) + (state && state.drawerOpen && isSplit() && !panelFold.left ? $('card-panel').offsetWidth + 16 : 0);
     document.body.classList.toggle('canvas-narrow', window.innerWidth - dw < 1180);
   }
   function usableRect() {
     const vp = $('spatial-viewport');
-    const drawerSpace = state.drawerOpen && window.innerWidth >= 640 ? $('node-drawer').offsetWidth + 16 : 0;
+    const drawerSpace = state.drawerOpen && window.innerWidth >= 640 && !panelFold.right ? $('node-drawer').offsetWidth + 16 : 0;
     const mm = window.innerWidth >= 768 ? 236 : 16;   // minimap bottom-left (about 214×176)
-    return { l: mm, r: vp.clientWidth - drawerSpace - 16, t: 100, b: vp.clientHeight - 76 };
+    const left = state.drawerOpen && isSplit() && !panelFold.left ? $('card-panel').offsetWidth + 32 : 0;
+    return { l: Math.max(mm, left), r: vp.clientWidth - drawerSpace - 16, t: 100, b: vp.clientHeight - 76 };
   }
   let crispTimer = null;
   // semantic zoom level, with a wide hysteresis band; while the wheel spins the level waits, then fades in
@@ -1639,11 +1829,16 @@
     const lod = zoom < (L === 'far' ? 0.5 : 0.4) ? 'far' : zoom < (L === 'near' ? 0.65 : 0.85) ? 'mid' : 'near';
     if (L === lod) return;
     if (Date.now() - lastWheelAt < 150) { clearTimeout(lodTimer); lodTimer = setTimeout(updateLod, 160); return; }
-    if (L === 'near') {   // remember each card's height up close before details fade out
-      world.querySelectorAll('.apple-bento-card').forEach(el => { el.style.setProperty('--near-h', `${el.offsetHeight}px`); });
-    }
+    // every card already carries its up-close height (--near-h, set in placeCard), so switching never moves a card
+    setTextZoom();
     world.dataset.lod = lod;
-    if (lod === 'near') later(() => { if (world.dataset.lod === 'near') world.querySelectorAll('.apple-bento-card').forEach(el => el.style.removeProperty('--near-h')); }, 260);
+  }
+  // big titles at mid/far follow the zoom in steps, once the wheel stops (re-flowing every title on every wheel tick is what made zooming stutter)
+  let ztTimer = null;
+  function setTextZoom() {
+    const world = $('world-layer');
+    const zt = String(Math.round(state.camera.zoom * 20) / 20);
+    if (world.style.getPropertyValue('--zt') !== zt) world.style.setProperty('--zt', zt);
   }
   function applyCamera() {
     const { panX, panY, zoom } = state.camera;
@@ -1655,6 +1850,8 @@
     world.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
     updateLod();
     world.style.setProperty('--z', zoom);
+    if (!world.style.getPropertyValue('--zt')) setTextZoom();
+    clearTimeout(ztTimer); ztTimer = setTimeout(setTextZoom, 170);
     const vp = $('spatial-viewport');
     const step = 28 * zoom;
     vp.style.backgroundSize = `100% 100%, ${step}px ${step}px`;
@@ -1793,9 +1990,28 @@
     }
   }
 
+  // the layout always uses each card's height up close. Zoomed out, a card only shows less (its height is held by --near-h),
+  // so zooming never moves anything. A card first drawn while zoomed out is measured once with the up-close styles.
+  function measureNearHeights(nodes, force = false) {
+    const world = $('world-layer'), lod = world.dataset.lod || 'near';
+    if (lod === 'near') { nodes.forEach(n => { const el = $(`bento-${n.id}`); if (el && el.offsetHeight) cardH[n.id] = el.offsetHeight; }); return false; }
+    const list = nodes.filter(n => (force || !cardH[n.id]) && $(`bento-${n.id}`));
+    if (!list.length) return false;
+    let changed = false;
+    world.dataset.lod = 'near';   // same frame: nothing is painted in between
+    list.forEach(n => {
+      const el = $(`bento-${n.id}`), keep = el.style.getPropertyValue('--near-h');
+      el.style.removeProperty('--near-h');
+      const h = el.offsetHeight;
+      if (h && Math.abs(h - (cardH[n.id] || 0)) > 0.5) { cardH[n.id] = h; changed = true; }
+      if (keep) el.style.setProperty('--near-h', `${cardH[n.id] || h}px`);
+    });
+    world.dataset.lod = lod;
+    return changed;
+  }
   let layoutFollowUntil = 0;
   function applyLayout(animate = false) {
-    if (!cardDragging) visibleNodes().forEach(n => { const el = $(`bento-${n.id}`); if (el && el.offsetHeight) cardH[n.id] = el.offsetHeight; });   // batched reads
+    if (!cardDragging) measureNearHeights(visibleNodes());
     const memo = {}, pos = {};
     const goal = state.nodes.GOAL;
     measure(goal, memo);
@@ -1848,6 +2064,7 @@
   }
   const ro = new ResizeObserver(entries => {
     let changed = false;
+    if (($('world-layer').dataset.lod || 'near') !== 'near') return;   // zoomed out the card shows less but keeps its up-close height
     entries.forEach(en => {
       const el = en.target;
       const n = state.nodes[el.dataset.nodeId];
@@ -2072,31 +2289,31 @@
             <button data-act="add-approach" data-id="${n.id}" class="${btnCls.ghost}">+ Approach</button>
           </div>`;
       }
-      return `${pbLine(n)}${body}`;
+      return `${pbLine(n)}${fitLine(n.verdict) ? `<div class="mt-1 text-[10.5px] text-amber-200 truncate" title="${esc(n.result || n.verdict)}">🖥 ${esc(fitLine(n.verdict))}</div>` : ''}${body}`;
     }
 
     /* STEP */
     if (n.tier === 'step') {
       const sibs = visibleKids(state.nodes[n.parentId]).filter(k => k.tier === 'step');
       const num = sibs.indexOf(n) + 1;
-      const icon = n.status === 'skipped' ? '<span class="text-zinc-500">–</span>' : n.status === 'done' ? '<span class="text-emerald-300">✓</span>'
+      const icon = n.status === 'skipped' ? '<span class="text-zinc-500">⏭</span>' : n.status === 'hold' ? '<span class="text-amber-300">⏸</span>' : n.status === 'done' ? '<span class="text-emerald-300">✓</span>'
         : n.status === 'running' ? '<span class="inline-block w-3 h-3 rounded-full border-2 border-amber-300 border-t-transparent spin"></span>'
         : n.status === 'waiting' ? '<span class="text-rose-300 font-bold">!</span>'
         : `<span class="text-zinc-400 font-mono-sf">${num}</span>`;
-      const ring = n.status === 'skipped' ? 'border-white/10 bg-transparent' : n.status === 'done' ? 'border-emerald-400/50 bg-emerald-500/10' : n.status === 'running' ? 'border-amber-300/60 bg-amber-400/10' : n.status === 'waiting' ? 'border-rose-400/60 bg-rose-500/15' : 'border-white/15 bg-white/5';
+      const ring = n.status === 'skipped' ? 'border-white/10 bg-transparent' : n.status === 'hold' ? 'border-amber-300/40 bg-amber-400/5' : n.status === 'done' ? 'border-emerald-400/50 bg-emerald-500/10' : n.status === 'running' ? 'border-amber-300/60 bg-amber-400/10' : n.status === 'waiting' ? 'border-rose-400/60 bg-rose-500/15' : 'border-white/15 bg-white/5';
       const sub = n.mode === 'approach' ? `⑂ ${visibleKids(n).length} methods compared` : n.mode === 'steps' ? `☰ Sub-plan ${visibleKids(n).length} steps` : '';
       return `
-        <div class="flex items-start gap-2.5 ${n.status === 'skipped' ? 'opacity-45' : ''}">
+        <div class="flex items-start gap-2.5 ${n.status === 'skipped' ? 'opacity-45' : n.status === 'hold' ? 'opacity-70' : ''}">
           ${(state.nodes[n.parentId] || {}).mode === 'checklist' ? `<button data-act="check-item" data-id="${n.id}" title="${n.status === 'done' ? 'Untick' : 'Tick this item'}" class="w-7 h-7 rounded-full border flex items-center justify-center text-[12px] shrink-0 hover:scale-110 transition ${ring}">${n.status === 'done' ? '✓' : ''}</button>`
             : `<div class="w-7 h-7 rounded-full border flex items-center justify-center text-[12px] shrink-0 ${ring}">${icon}</div>`}
           <div class="min-w-0 flex-1">
-            <div class="flex items-center justify-between gap-2"><span class="font-mono-sf text-[9.5px] ${n.chosen ? 'text-emerald-300' : 'text-zinc-500'} truncate">${esc(itemLabel(n, num))} · ${esc(n.id)}${n.status === 'skipped' ? ' · skipped' : ''}</span>${n.createdBy && isBotId(n.createdBy) ? `<span class="font-mono-sf text-[9.5px] text-sky-300">🤖 ${esc(n.createdBy)}</span>` : ''}</div>
+            <div class="flex items-center justify-between gap-2"><span class="font-mono-sf text-[9.5px] ${n.chosen ? 'text-emerald-300' : 'text-zinc-500'} truncate">${esc(itemLabel(n, num))} · ${esc(n.id)}${n.status === 'skipped' ? ' · skipped' : n.status === 'hold' ? ' · on hold' : ''}</span>${n.createdBy && isBotId(n.createdBy) ? `<span class="font-mono-sf text-[9.5px] text-sky-300">🤖 ${esc(n.createdBy)}</span>` : ''}</div>
             <div class="text-[12.5px] font-semibold text-white leading-snug">${esc(n.title)}</div>
             ${sub ? `<div class="text-[10.5px] text-cyan-300 mt-0.5 flex items-center justify-between gap-1.5">${sub}${collapseBtn(n)}</div>` : ''}
             ${n.gateOpen ? `<div class="text-[10.5px] text-amber-300 mt-0.5">Waiting for your approval</div><div class="mt-1.5 flex gap-1.5"><button data-act="gate-approve" data-id="${n.id}" class="${btnCls.ok}">🔓 Approve</button><button data-act="gate-reject" data-id="${n.id}" class="${btnCls.ghost}">↩ Send back</button></div>`
               : n.status === 'waiting' ? '<div class="text-[10.5px] text-rose-300 mt-0.5">Waiting for you · click the bot to see the question</div>' : ''}
             ${n.decision ? `<div class="text-[10.5px] text-amber-200 mt-0.5">Decision: ${esc(n.decision)}</div>` : ''}
-            ${(state.nodes[n.parentId] || {}).mode === 'checklist' ? checklistLine(n) : n.contract || n.resultData ? resultHtml(n) : `${n.result ? `<div class="text-[10.5px] text-emerald-200 mt-0.5">${esc(n.result)}</div>` : ''}${stepPlanHtml(n)}`}
+            ${(state.nodes[n.parentId] || {}).mode === 'checklist' ? checklistLine(n) : n.contract || n.resultData ? resultHtml(n) : `${stepResultLine(n)}${stepPlanHtml(n)}`}
           </div>
         </div>`;
     }
@@ -2118,7 +2335,7 @@
     else actions = `<button data-act="run" data-id="${n.id}" class="${btnCls.pri}">▶ Validate</button>`;
     const sub = n.mode === 'steps' ? `☰ Sub-plan ${visibleKids(n).length} steps` : n.mode === 'approach' ? `⑂ Sub-approaches ${visibleKids(n).length} ` : '';
     return `
-      ${n.params ? `<div class="lod-detail mt-2 px-2.5 py-1.5 rounded-xl bg-black/35 border border-white/[0.07] font-mono-sf text-[10px] text-zinc-300 truncate">${esc(n.params)}</div>` : ''}
+      ${(n.label ? fitLine(n.label) : fitLine(n.params, 34)) ? `<div class="lod-detail mt-2 px-2.5 py-1.5 rounded-xl bg-black/35 border border-white/[0.07] ${n.label ? 'text-[10.5px]' : 'font-mono-sf text-[10px]'} text-zinc-300 truncate" title="${esc(n.params || '')}">${esc(n.label ? fitLine(n.label) : fitLine(n.params, 34))}</div>` : ''}
       ${n.contract || n.resultData ? resultHtml(n) : ''}
       ${!meth && curve && mn ? `
       <div class="lod-detail mt-2 p-2 rounded-2xl bg-black/30 border border-white/[0.07]">
@@ -2132,8 +2349,8 @@
       <div class="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden mt-2">
         <div class="h-full transition-[width] duration-300 ${st === 'passed' ? 'bg-emerald-400' : st === 'failed' ? 'bg-rose-400' : st === 'validating' ? 'bar-shimmer' : 'bg-white/10'}" style="width:${n.progress}%"></div>
       </div>
-      ${st === 'failed' ? `<div class="mt-2 px-2.5 py-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 text-[10.5px] text-rose-100 leading-snug">✕ Failed: ${esc(n.summary)}</div>` : ''}
-      ${st === 'passed' ? `<div class="mt-2 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-[10.5px] text-emerald-100 leading-snug">✓ ${esc(n.summary)}</div>` : ''}
+      ${st === 'failed' ? `<div class="mt-2 px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-400/30 text-[10.5px] text-rose-100 truncate" title="${esc(n.summary)}">✕ ${esc(fitLine(n.verdict) || fitLine(n.summary, 40) || 'Failed')}</div>` : ''}
+      ${st === 'passed' ? `<div class="mt-2 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-[10.5px] text-emerald-100 truncate" title="${esc(n.summary)}">✓ ${esc(fitLine(n.verdict) || fitLine(n.summary, 40) || 'Passed')}</div>` : ''}
       ${archiveHtml(n)}
       <div class="mt-2 flex items-center gap-1.5 flex-wrap">${actions}</div>`;
   }
@@ -2172,14 +2389,16 @@
   }
   function refreshChrome() {
     document.body.classList.toggle('drawer-open', !!state.drawerOpen);
+    showCardPanel(!!state.drawerOpen);
     updateNarrow();
     const ctx = contextSet();
     visibleNodes().forEach(n => { const el = $(`bento-${n.id}`); if (el) applyChrome(el, n, ctx); });
     scheduleScene();
   }
   function placeCard(el, n) {
-    const h = cardH[n.id] || el.offsetHeight || hOf(n);
+    const h = cardH[n.id] || (($('world-layer').dataset.lod || 'near') === 'near' && el.offsetHeight) || hOf(n);
     cardH[n.id] = h;
+    el.style.setProperty('--near-h', `${h}px`);
     el.style.width = `${n.width}px`;
     el.style.left = `${n.x - n.width / 2}px`;
     el.style.top = `${n.y - h / 2}px`;
@@ -2227,6 +2446,7 @@
     const st = sc ? sc.scrollTop : 0;
     el.innerHTML = cardHtml(n);
     applyChrome(el, n);
+    if (($('world-layer').dataset.lod || 'near') !== 'near' && measureNearHeights([n], true)) scheduleLayout();
     placeCard(el, n);
     const sc2 = el.querySelector('.archive-scroll');
     if (sc2) sc2.scrollTop = st;
@@ -2603,6 +2823,7 @@
   function botStatusZh(b) {
     if (b.question) return '❗ Has a question';
     if (b.unread) return '💬 Replied';
+    if (b.external) return extActivityLine(b);
     if (b.flash && Date.now() < b.flash.until) return b.flash.text;
     if (b.mini && b.status === 'VALIDATING') return `subagent validating`;
     if (b.status === 'QUEUED') return `⏳ ${b.gate ? 'To validate' : 'Waiting'}${b.tag ? ` ${b.tag}` : ''}`;
@@ -2655,7 +2876,7 @@
     const btn = $('btn-away');
     if (!btn) return;
     const n = liveBots().filter(b => b.question).length;
-    btn.innerHTML = `Away${n ? `<span class="ml-1.5 inline-block min-w-[16px] h-4 px-1 rounded-full bg-[#FFD60A] text-black text-[10px] font-bold leading-4 text-center align-middle">${n}</span>` : ''}`;
+    btn.innerHTML = `📊 Dashboard${n ? `<span class="ml-1.5 inline-block min-w-[16px] h-4 px-1 rounded-full bg-[#FFD60A] text-black text-[10px] font-bold leading-4 text-center align-middle">${n}</span>` : ''}`;
   }
   function renderIsland() {
     renderAwayBadge();
@@ -2893,7 +3114,7 @@
     state.selectedNodeId = id;
     state.drawerOpen = true;
     state.drawerMode = 'node';
-    $('node-drawer').classList.remove('translate-x-[115%]');
+    $('node-drawer').classList.remove('translate-x-[115%]'); showCardPanel(true);
     const b = ownerBot(id);
     if (b && opts.brief) state.briefBotId = b.id;
     renderBotsAll();
@@ -2906,7 +3127,7 @@
     state.drawerMode = 'controller';
     state.selectedNodeId = null;
     state.drawerOpen = true;
-    $('node-drawer').classList.remove('translate-x-[115%]');
+    $('node-drawer').classList.remove('translate-x-[115%]'); showCardPanel(true);
     renderBotsAll();
     renderDrawer();
     save();
@@ -2916,7 +3137,7 @@
     state.selectedNodeId = null;
     state.drawerMode = 'node';
     state.briefBotId = null;
-    $('node-drawer').classList.add('translate-x-[115%]');
+    $('node-drawer').classList.add('translate-x-[115%]'); showCardPanel(false);
     cancelRename();
     refreshChrome();
     renderIsland();
@@ -2936,6 +3157,7 @@
     $('drawer-lineage-json').classList.add('hidden');
     delete $('drawer-chat-input').dataset.ph;
     applyChatPlaceholder();
+    setChatHead();
     closeSlash(); slashCache.agent = null; refreshComposer();
     renderDrawerSession();
     renderPin();
@@ -2976,7 +3198,7 @@
       if (n.mergeState === 'review') return P('In review', 'fuchsia');
       return ({ validating: P(`● Validating ${n.progress || 0}%`, 'sky'), passed: P('✓ Passed', 'emerald'), failed: P('✕ Failed', 'rose'), ready: P('○ Not validated', 'zinc') })[n.status] || P('', 'zinc');
     }
-    if (n.tier === 'step') return ({ done: P('✓ Done', 'emerald'), running: P('● Running', 'sky'), waiting: P('❗ Waiting for you', 'amber'), pending: P('○ Not started', 'zinc') })[n.status] || P('', 'zinc');
+    if (n.tier === 'step') return ({ done: P('✓ Done', 'emerald'), running: P('● Running', 'sky'), waiting: P('❗ Waiting for you', 'amber'), pending: P('○ Not started', 'zinc'), skipped: P('⏭ Skipped', 'zinc'), hold: P('⏸ On hold', 'amber') })[n.status] || P('', 'zinc');
     if (n.tier === 'task') {
       if (n.done) return P('✓ Done', 'emerald');
       if (n.mergeState === 'review') return P('In review', 'fuchsia');
@@ -3017,7 +3239,7 @@
     state.selectedBotId = b.id;
     state.selectedNodeId = b.homeId;
     state.drawerOpen = true;
-    $('node-drawer').classList.remove('translate-x-[115%]');
+    $('node-drawer').classList.remove('translate-x-[115%]'); showCardPanel(true);
     if (b.question) state.briefBotId = b.id;
     renderBotsAll();
     renderDrawer();
@@ -3049,14 +3271,10 @@
     const o = ctxOwner(who);
     const id = who === 'MC' ? 'MC' : who.id;
     const n = (o.handoffs || []).length;
-    return `<div class="mt-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-2 text-[10.5px] font-mono-sf text-zinc-400">
-      <span class="flex items-center gap-1.5 min-w-0 whitespace-nowrap overflow-hidden">context ${ctxBar(o)} <span class="${o.ctx >= 65 ? 'text-amber-200' : 'text-zinc-200'}">${Math.round(o.ctx || 0)}%</span> · ${o.handing ? `<span class="text-violet-300">${handingText(o)}</span>` : `Gen ${o.gen} `}</span>
+    return `<div class="mt-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[10.5px] font-mono-sf text-zinc-400">
+      <span class="flex items-center gap-1.5 shrink-0 whitespace-nowrap">context ${ctxBar(o)} <span class="${o.ctx >= 65 ? 'text-amber-200' : 'text-zinc-200'}">${Math.round(o.ctx || 0)}%</span> · ${o.handing ? `<span class="text-violet-300">${handingText(o)}</span>` : `Gen ${o.gen} `}</span>
       <span class="flex items-center gap-1 shrink-0"><button data-act="view-handoff" data-id="${id}" ${n ? '' : 'disabled'} class="${btnCls.ghost} disabled:opacity-35">📄 Handoff ${n}</button><button data-act="handoff" data-id="${id}" ${o.handing ? 'disabled' : ''} class="${btnCls.ghost} disabled:opacity-35" title="Write a handoff now → /clear → read it back">🔄 Hand off</button></span>
-    </div>${LIVE ? `<div class="mt-1.5 px-3 py-1.5 rounded-xl ${o.external ? 'bg-amber-500/10 border-amber-400/30' : 'bg-white/[0.03] border-white/[0.06]'} border flex items-center justify-between gap-2 text-[10.5px] font-mono-sf text-zinc-400">
-      <span class="truncate">${o.external ? '<span class="text-amber-200">🔓 handed back to you</span>' : `session ${esc((o.realSession || '').slice(0, 8) || 'not started')}`}</span>
-      ${o.external ? `<button data-act="take-back" data-id="${id}" class="${btnCls.ghost}" title="orbmap talks to this session again">🔒 Take back</button>`
-        : `<button data-act="hand-back" data-id="${id}" class="${btnCls.ghost}" title="Copy the command to continue this session in a terminal or VS Code; orbmap leaves it alone until you take it back">🔓 Continue in terminal</button>`}
-    </div>` : ''}`;
+    </div>${LIVE ? terminalRowHtml(o, id) : ''}`;
   }
 
   /* ---- Pinned question + 30-second brief ---- */
@@ -3070,7 +3288,7 @@
       const ob = ownerBot(state.selectedNodeId);
       bots = liveBots().filter(b => b.question && (b === ob || b.dockedNodeId === state.selectedNodeId || b.homeId === state.selectedNodeId));
     }
-    $('drawer-actions').classList.toggle('hidden', bots.some(b => state.briefBotId === b.id));
+    $('drawer-actions').classList.toggle('hidden', !isSplit() && bots.some(b => state.briefBotId === b.id));   // the left panel has room for both
     if (!bots.length) { box.innerHTML = ''; return; }
     box.innerHTML = bots.map(b => {
       const q = b.question;
@@ -3128,17 +3346,19 @@
   function renderActions() {
     const box = $('drawer-actions');
     if (!state.drawerOpen) { box.innerHTML = ''; return; }
-    if (isMC()) return void (box.innerHTML = mcPanelHtml());
+    if (isMC()) return void (box.innerHTML = `<div class="px-5 py-3 border-b border-white/[0.06]">${ctxRow('MC')}<div class="mt-1.5 font-mono-sf text-[10px] text-zinc-500">session ${esc(state.mc.sessionId)}</div></div>` + mcPanelHtml());
     if (isBotView()) { const bb = botById(state.selectedBotId); box.innerHTML = bb ? botPanelHtml(bb) : ''; return; }
     const n = state.nodes[state.selectedNodeId];
     if (!n) { box.innerHTML = ''; return; }
     let html = '';
+    const sb = (n.tier === 'gate' || n.tier === 'worker') && botById(n.botId);
+    const sessionBox = sb ? `<div class="px-5 py-3 border-b border-white/[0.06]">${ctxRow(sb)}<div class="mt-1.5 font-mono-sf text-[10px] text-zinc-500">session ${esc(sb.sessionId || '')}</div></div>` : '';
     if (n.tier === 'gate') {
-      html = panel('Merge requests (review → merge → re-verify)', `<div class="space-y-1">${mrListHtml(n, 12)}</div>`)
+      html = sessionBox + panel('Merge requests (review → merge → re-verify)', `<div class="space-y-1">${mrListHtml(n, 12)}</div>`)
         + panel('Inverted pyramid: put judgment into tools, not into people’s heads', pyramidHtml())
         + panel(`🛡 Auto checks ${state.guardrails.length}`, guardrailsHtml());
     } else if (n.tier === 'worker') {
-      html = panel(`${esc(n.title)} Job queue`, `<div class="space-y-1">${workerJobsHtml(n, 12)}</div>`);
+      html = sessionBox + panel(`${esc(n.title)} Job queue`, `<div class="space-y-1">${workerJobsHtml(n, 12)}</div>`);
     } else {
       html = cardViewHtml(n);
     }
@@ -3180,6 +3400,10 @@
       if (n.result) main += `<div class="mt-1 text-[12px] text-emerald-200">${esc(n.result)}</div>`;
       edits.push(rowBtn('insert-after', n.id, '↧ Insert a step after'));
       if (!n.mode) edits.push(rowBtn('make-compare', n.id, '⑂ Compare two methods instead'), rowBtn('make-subplan', n.id, '☰ Split into a sub-plan'));
+    }
+    if (n.tier === 'step') {
+      if (['pending', 'waiting'].includes(n.status)) links.push(linkBtn('skip-step', n.id, '⏭ Skip'), linkBtn('hold-step', n.id, '⏸ Hold for later'));
+      if (['skipped', 'hold'].includes(n.status)) links.push(linkBtn('resume-step', n.id, '▶ Put back in the plan'));
     }
     if (n.tier === 'task') {
       const pb = PLAYBOOKS[playbookOf(n)];
@@ -3247,7 +3471,7 @@
       + (!state.guardrails.length ? '' : panel(`🛡 Auto checks <span class="font-mono-sf text-violet-300">${state.guardrails.length}</span> <span class="font-mono-sf text-[10px] text-zinc-400">Verify ${verifyShare()}% · revert ${revertRate()}%</span>`, guardrailsHtml()))
 
       + panel(`🧾 Decision log <span class="font-mono-sf text-zinc-400">${(state.decisions || []).length}</span>`, decisionsHtml(), `<button data-act="download-decisions" class="${btnCls.ghost}">⬇ TSV</button>`)
-      + `<details class="px-5 py-3 border-b border-white/[0.06]"><summary class="cursor-pointer text-[11.5px] text-zinc-400 hover:text-white select-none">MC session (context, handoffs)</summary><div class="mt-2">${ctxRow('MC')}<div class="mt-1.5 font-mono-sf text-[10px] text-zinc-500">session ${esc(state.mc.sessionId)}</div></div></details>`;
+;
   }
 
   function formatChatText(s) {
@@ -3262,11 +3486,77 @@
       : mascotMini(id) ? `<div class="w-7 h-7 rounded-full bg-[#14161D] flex items-center justify-center shrink-0" style="box-shadow:0 0 0 2px ${color}">${mascotMini(id, 19)}</div>`
       : `<div class="w-7 h-7 rounded-full flex items-center justify-center font-mono-sf text-[10px] font-bold shrink-0" style="background:${color}; color:${isLightHex(color) ? '#1F2937' : '#FFFFFF'}; box-shadow:0 0 0 2px ${color}66">${esc(String(id).slice(0, 3))}</div>`;
   }
+  // messages that came from another bot: one compact line (who · what · result), the full text folds out on click
+  const inboxOpen = new Set();
+  function inboxParse(text) {
+    const t = String(text || '');
+    let m = t.match(/^📨 (?:Received (\S+) ’s summary|subagent report (\S+)): ([\s\S]*)$/);
+    if (m) return { icon: '📨', from: m[1] || m[2], tag: m[1] ? 'summary' : 'report', body: m[3], node: m[1] || m[2] };
+    m = t.match(/^📥 Received (\S+) ’s job (\S+): ([\s\S]*)$/);
+    if (m) return { icon: '📥', from: m[1], tag: `job ${m[2]}`, body: m[3] };
+    m = t.match(/^💬 (.+?) → (.+?)( \(note\))?: ([\s\S]*)$/);
+    if (m && m[4].length > 60) return { icon: m[3] ? '📝' : '💬', from: m[1], to: m[2], tag: m[3] ? 'note' : 'message', body: m[4] };
+    m = t.match(/^(🔍|↩) (?:Merge|Retract) request sent \S+ to QA/);
+    if (m) return { icon: m[1], from: 'QA', tag: m[1] === '🔍' ? 'review' : 'revert', body: '', short: 'sent' };
+    m = t.match(/^⏸ QA stopped: Claude usage limit(?: \((resets [^)]*\)?)\))?/);
+    if (m) return { icon: '⏸', from: 'QA', tag: 'usage limit', body: '', short: m[1] ? m[1].replace(/ \(.*$/, '') : 'retry later' };
+    m = t.match(/^(📥|📣) main (?:updated )?(?:to )?\**v(\d+)\**(?: \(\w+\))?: ([\s\S]*)$/);   // a main update: one line, the full text on click
+    if (m) {
+      const id = (m[3].match(/^(?:Adopt|Retract) (\S+)/) || m[3].match(/^(\S+) “/) || [])[1];
+      return { icon: m[1], from: id || 'main', tag: `main v${m[2]}${m[1] === '📥' ? ' ⬇' : ''}${/^Retract/.test(m[3]) ? ' ↩' : ''}`, body: m[3], node: id, main: true };
+    }
+    return null;
+  }
+  // any other system note, or a message from a bot that is not this chat's bot: icon · first line, the rest on click
+  function noteParse(text, from) {
+    const t = String(text || '').trim();
+    let q = t.match(/^✅ (?:MR-\d+ )?passed review(?: and is merged into main)?/);
+    if (q) return { icon: '✅', from: from || 'QA', tag: 'passed', short: /merged/.test(t) ? 'merged into main' : '', body: t.replace(/^✅ (?:MR-\d+ )?/, ''), tone: 'emerald' };
+    q = t.match(/^✅ (?:MR-\d+ )?Review done/);
+    if (q) return { icon: '✅', from: from || 'QA', tag: 'verified', short: '', body: t.replace(/^✅ (?:MR-\d+ )?/, ''), tone: 'emerald' };
+    q = t.match(/^❌ (?:MR-\d+ )?[Dd]id not pass review:?\s*/);
+    if (q) return { icon: '❌', from: from || 'QA', tag: 'not passed', short: clipLine(t.slice(q[0].length).split('\n')[0], 40), body: t.slice(q[0].length), tone: 'rose' };
+    const em = t.match(/^(?:[\p{Extended_Pictographic}][\uFE0F\u200D\p{Extended_Pictographic}]*|[⏸⏭↩✓✕⚠⑂☰◇])\s*/u);
+    const rest = em ? t.slice(em[0].length) : t;
+    const first = rest.split('\n')[0].replace(/\*\*/g, '').replace(/`/g, '');
+    const short = fitLine(first, 64) || clipLine(first, 64);
+    return { icon: em ? em[0].trim() : (from ? '💬' : 'ℹ️'), from: from || '', tag: '', body: short === rest.replace(/\*\*/g, '').replace(/`/g, '').trim() ? '' : rest, short, tone: /^⚠|^❌|^✕/.test(t) ? 'rose' : /^⏸/.test(t) ? 'amber' : from ? 'violet' : 'zinc' };
+  }
+  // the terminal hand-over notes: small boxes side by side on one line (the full sentence on hover)
+  const TERM_PILLS = [[/^\S{0,3}\s*Moving this chat to a terminal/, '🖥 To terminal'], [/^\S{0,3}\s*Handed back/, '🔓 Handed back'], [/^\S{0,3}\s*Taken back/, '🔒 Taken back'], [/^\S{0,3}\s*\S+ was closed in the terminal/, '↩ Closed in terminal']];
+  function termPill(text) {
+    const hit = TERM_PILLS.find(([re]) => re.test(String(text || '')));
+    return hit ? `<span class="inline-flex items-center px-2 py-0.5 rounded-lg border border-white/[0.1] bg-white/[0.04] text-[10.5px] text-zinc-300 whitespace-nowrap" title="${esc(text)}">${hit[1]}</span>` : '';
+  }
+  function inboxHtml(msg, k, parsed) {
+    const x = parsed || inboxParse(msg.text);
+    if (!x) return '';
+    const n = x.node ? state.nodes[x.node] : null;
+    const st = n && n.status === 'passed' ? '<span class="text-emerald-300">✓</span>' : n && n.status === 'failed' ? '<span class="text-rose-300">✕</span>' : '';
+    const short = clipLine(x.short || (n && n.verdict) || (x.main && n ? fitLine(n.title, 34) || clipLine(n.title, 34) : '') || fitLine(oneLine(x.body), 38) || '', 40);
+    const open = inboxOpen.has(k) && !!x.body;
+    const edge = { rose: 'border-l-rose-400/70', amber: 'border-l-amber-300/70', violet: 'border-l-violet-400/60', zinc: 'border-l-zinc-500/50', emerald: 'border-l-emerald-400/70' }[x.tone] || 'border-l-sky-400/60';
+    const box = `<button data-inbox="${esc(k)}" class="min-w-0 shrink px-2 py-1 inline-flex items-center gap-1.5 text-left text-[11px] text-zinc-300 rounded-lg border border-white/[0.08] border-l-2 ${edge} ${open ? 'bg-white/[0.08]' : 'bg-white/[0.025] hover:bg-white/[0.06]'}" title="${x.body ? (open ? 'Fold' : 'Show the full text') : esc(msg.text || '')}">
+        <span class="shrink-0">${x.icon}</span>${x.from ? `<span class="shrink-0 px-1.5 rounded-md bg-white/[0.07] font-mono-sf text-[10px] text-sky-200">${esc(x.from)}</span>` : ''}${x.to ? `<span class="text-zinc-500">→</span><span class="px-1.5 rounded-md bg-white/[0.07] font-mono-sf text-[10px] text-zinc-300">${esc(x.to)}</span>` : ''}${x.tag ? `<span class="shrink-0 text-[10px] text-zinc-500">${esc(x.tag)}</span>` : ''}${st}${x.status ? `<span class="text-[10px] text-amber-300">${x.status}</span>` : ''}${short ? `<span class="min-w-0 truncate text-zinc-300">${esc(short)}</span>` : ''}${x.body ? `<span class="text-zinc-500 text-[10px]">${open ? '▾' : '▸'}</span>` : ''}</button>`;
+    const body = open ? `<div class="rounded-xl border border-white/[0.08] border-l-2 ${edge} bg-white/[0.025] px-3 py-2 text-[11.5px] leading-relaxed text-zinc-300 selectable-text">${formatChatText(x.body)}</div>` : '';
+    return BOX + box + BODY + body;
+  }
+  const BOX = '\u0002', BODY = '\u0003';
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('[data-inbox]');
+    if (!b) return;
+    const k = b.dataset.inbox;
+    if (inboxOpen.has(k)) inboxOpen.delete(k); else inboxOpen.add(k);
+    const box = $('drawer-messages'), top = box ? box.scrollTop : 0;
+    renderDrawerMessages();
+    if (box) box.scrollTop = top;
+  });
   function renderDrawerMessages() {
     if (!state.drawerOpen) return;
     const mc = isMC();
     const n = mc ? null : state.nodes[state.selectedNodeId];
     if (!mc && !n) return;
+    if (!mc) linkChats();
     const msgs = mc ? state.mc.messages : n.messages;
     const ob = mc ? null : ownerBot(n.id);
     clearUnreadShown(mc, n);
@@ -3278,12 +3568,15 @@
     chatStick = false;
     box.dataset.key = key;
     let html = msgs.map((m, idx) => {
-      if (m.sender === 'user') return `<div class="flex justify-end"><div class="max-w-[84%] px-3.5 py-2.5 rounded-[18px] rounded-br-sm bg-[#0A84FF] text-white text-[13px] leading-[1.55] whitespace-pre-wrap">${esc(m.text)}${attsHtml(m.atts)}</div></div>`;
-      if (m.sender === 'system') return `<div class="flex justify-center"><div class="max-w-[92%] px-3 py-1.5 rounded-2xl bg-white/[0.05] text-[11px] leading-snug text-zinc-300 text-center" style="text-wrap:pretty">${formatChatText(m.text)}</div></div>`;
+      if (m.sender === 'user') return `<div class="flex justify-end"><div class="max-w-[84%] px-3.5 py-2.5 rounded-[18px] rounded-br-sm ${m.via === 'terminal' ? 'bg-[#0A84FF]/70' : 'bg-[#0A84FF]'} text-white text-[13px] leading-[1.55] whitespace-pre-wrap">${m.via === 'terminal' ? '<div class="text-[9.5px] font-mono-sf opacity-75 mb-0.5">🖥 terminal</div>' : ''}${esc(m.text)}${attsHtml(m.atts)}</div></div>`;
+      if (m.sender === 'system' || /^📣 main updated/.test(m.text || '')) { const ib = inboxHtml(m, `${key}:${idx}`); if (ib) return ib; }
+      if (m.sender === 'system' && termPill(m.text)) return BOX + termPill(m.text) + BODY;
+      if (m.sender === 'system') return inboxHtml(m, `${key}:${idx}`, noteParse(m.text));
+      if (m.sender === 'bot' && m.botId && m.botId !== (mc ? 'MC' : (ob ? ob.id : m.botId))) return inboxHtml(m, `${key}:${idx}`, noteParse(m.text, m.botId));   // another bot
       const isMcMsg = m.botId === 'MC';
       const b = isMcMsg ? MC_META : (botById(m.botId) || ob || MC_META);
       const name = isMcMsg ? 'MC' : b.id;
-      const reportTag = m.sender === 'report' ? `<span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] ${m.tone === 'err' ? 'bg-rose-500/20 text-rose-200' : m.tone === 'warn' ? 'bg-amber-500/20 text-amber-200' : 'bg-emerald-500/20 text-emerald-200'}">reported</span>` : '';
+      const reportTag = m.via === 'terminal' ? '<span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] bg-amber-500/15 text-amber-200 font-mono-sf">🖥 terminal</span>' : m.sender === 'report' ? `<span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] ${m.tone === 'err' ? 'bg-rose-500/20 text-rose-200' : m.tone === 'warn' ? 'bg-amber-500/20 text-amber-200' : 'bg-emerald-500/20 text-emerald-200'}">reported</span>` : '';
       let extra = '';
       if (m.kind === 'arena') extra = arenaHtml(m);
       if (m.kind === 'confirm') extra = m.status === 'pending'
@@ -3307,9 +3600,17 @@
             ${m.sender === 'bot' && m.kind !== 'bro' ? `<button data-act="bro" data-id="${idx}" class="mt-1.5 text-[10.5px] text-zinc-500 hover:text-white">🗣 Plain words</button>` : ''}
           </div>
         </div>`;
-    }).join('');
+    }).reduce((out, x) => {   // notes next to each other share one line of boxes; an opened one shows under that line
+      if (x.startsWith(BOX)) {
+        const [b, body] = x.slice(1).split(BODY);
+        const last = out[out.length - 1];
+        if (last && typeof last === 'object') { last.boxes.push(b); if (body) last.bodies.push(body); }
+        else out.push({ boxes: [b], bodies: body ? [body] : [] });
+      } else out.push(x);
+      return out;
+    }, []).map(x => typeof x === 'object' ? `<div class="space-y-1.5">${x.boxes.reduce((rows, b, i) => { if (i % 3 === 0) rows.push([]); rows[rows.length - 1].push(b); return rows; }, []).map(r => `<div class="flex gap-1.5 min-w-0">${r.join('')}</div>`).join('')}${x.bodies.join('')}</div>` : x).join('');
     const tKey = mc ? '@MC' : n.id;
-    if (typingNodes.has(tKey)) {
+    if (typingNodes.has(tKey) || (!mc && [...typingNodes].some(k => state.nodes[k] && chatNode(state.nodes[k]) === chatNode(n)))) {
       const b = mc ? MC_META : (ob || MC_META);
       html += `<div class="flex items-center gap-2.5">${avatar(b.id, b.color)}<div class="px-3.5 py-3 rounded-[18px] rounded-tl-sm bg-white/[0.06] border border-white/[0.08] flex items-center gap-1.5">${[0, 0.18, 0.36].map(d => `<span class="typing-dot" style="background:${b.color}; animation-delay:${d}s"></span>`).join('')}</div></div>`;
     }
@@ -3332,7 +3633,7 @@
       else if (n.tier === 'worker') chips = ['Current queue', 'Who sends the most jobs?'];
       else if (n.tier === 'subgoal') chips = n.botId ? ['Plan the tasks for this sub-goal', 'What are the prerequisites?'] : ['Create the bot for this sub-goal', 'Create tasks'];
       else if (n.tier === 'task') chips = !n.mode ? ['Lay it out as steps', 'List a few approaches to try in parallel'] : n.mode === 'steps' ? ['Run it', 'Where are we now?', 'Add a step at the end'] : ['Validate all approaches', 'Pick among passed approaches with Arena', 'Add another approach', 'Summarize the approach results'];
-      else if (n.tier === 'step') chips = ['Insert a step after this', 'Compare two methods for this step', 'Split into a sub-plan'];
+      else if (n.tier === 'step') chips = ['Insert a step after this', 'Skip this step', 'Hold this step for later', 'Split into a sub-plan'];
       else if (n.tier === 'approach') chips = n.status === 'failed' ? ['Why did it fail?', 'See the one-page report', 'Fold into the level above'] : n.status === 'passed' ? ['Adopt into the level above', 'See the one-page report'] : n.status === 'ready' ? ['Start validating', 'Do a sub-plan first', 'Branch into a few more approaches'] : ['Progress so far?'];
     }
     $('drawer-quick-chips').innerHTML = chips.map(t => `<button type="button" data-chat="${esc(t)}" class="px-3 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.13] border border-white/[0.08] text-[11px] text-zinc-300 hover:text-white whitespace-nowrap transition shrink-0">${esc(t)}</button>`).join('');
@@ -3415,6 +3716,23 @@
     save();
   }
 
+  // ⏭ skip (counts as finished, not run) · ⏸ hold (stays on the map for later, the task waits for it) · ▶ resume
+  function setStepState(id, what, by = 'you') {
+    const n = state.nodes[id];
+    if (!n || n.tier !== 'step') return { ok: false, error: `${id} is not a step` };
+    if (n.status === 'running') return { ok: false, error: `${id} is running right now; wait until it stops` };
+    if (what !== 'resume' && n.status === 'done') return { ok: false, error: `${id} is already done` };
+    const c = state.nodes[n.parentId];
+    n.status = what === 'skip' ? 'skipped' : what === 'hold' ? 'hold' : 'pending';
+    const bq = (state.bots || []).find(b => b.question && b.question.nodeId === id);   // its open question goes away with it
+    if (bq && what !== 'resume') { bq.question = null; if (state.briefBotId === bq.id) state.briefBotId = null; setStatus(bq, 'IDLE'); }
+    if (c) c.messages.push({ sender: 'system', text: `${what === 'skip' ? '⏭' : what === 'hold' ? '⏸' : '▶'} ${id} ${what === 'skip' ? 'skipped' : what === 'hold' ? 'on hold' : 'back in the plan'} (${by})` });
+    const t = c && (c.tier === 'task' ? c : taskOf(n));
+    if (t && !t.done && t.mode === 'steps' && visibleKids(t).filter(k => k.tier === 'step').every(k => isDoneLike(k))) completeTaskSteps(t, ownerBot(t.id));
+    refreshUp(id); refreshDrawerIf([id, n.parentId]); renderBotsAll(); renderDrawerMessages(); save();
+    return { ok: true };
+  }
+
   /* ---------------- Execution engine (async; after a reset sleep never resolves → flows stop by themselves) ---------------- */
   function setStatus(b, st) { if (b) { b.status = st; } }
   async function runContainer(id) {
@@ -3431,7 +3749,7 @@
     refreshCard(c.id); refreshDrawerIf([c.id]);
     try {
       while (state.epoch === ep) {
-        const step = visibleKids(c).find(s => s.tier === 'step' && s.status !== 'done');
+        const step = visibleKids(c).find(s => s.tier === 'step' && !isDoneLike(s) && s.status !== 'hold');
         if (!step) break;
         if (state.paused) {
           state.pausedContainers = [...(state.pausedContainers || []), c.id];
@@ -3444,6 +3762,12 @@
         if (step.status !== 'done') return;   // waiting (continues by itself once answered)
       }
       if (state.epoch !== ep) return;
+      const held = visibleKids(c).filter(s => s.tier === 'step' && s.status === 'hold');
+      if (held.length) {
+        c.messages.push({ sender: 'system', text: `⏸ ${held.map(s => s.id).join(', ')} on hold: the rest is done. Resume or skip ${held.length > 1 ? 'them' : 'it'} to finish ${c.id}.` });
+        if (bot) setStatus(bot, 'IDLE');
+        return;
+      }
       if (c.tier === 'task') finishTaskSteps(c, bot);
     } finally {
       if (state.epoch === ep) { running.delete(c.id); refreshCard(c.id); refreshDrawerIf([c.id]); }
@@ -3474,7 +3798,7 @@
     } else if (step.mode === 'steps' && visibleKids(step).length) {
       await runPlan(step);
       if (state.epoch !== ep) return;
-      if (visibleKids(step).some(k => k.status !== 'done')) { step.status = 'waiting'; refreshCard(step.id); return; }
+      if (visibleKids(step).some(k => !isDoneLike(k))) { step.status = 'waiting'; refreshCard(step.id); return; }
       if (bot) moveBot(bot, step.id);
     } else if (LIVE) {
       if (!(await liveLeafStep(step, bot, ep))) return;
@@ -3964,13 +4288,13 @@
     const rank = { running: 0, submitted: 0, queued: 1, done: 2, lost: 3 };
     const jobs = sv.jobs.slice().sort((a, b) => rank[a.status] - rank[b.status] || b.t - a.t).slice(0, max);
     if (!jobs.length) return '<div class="text-[10.5px] text-zinc-500">No jobs right now.</div>';
+    const ST = { running: ['▶', 'amber'], submitted: ['⏳ sent', 'amber'], queued: ['⏳ queue', 'zinc'], done: ['✓ done', 'green'], lost: ['■ stopped', 'red'] };
     return jobs.map(j => {
       const fb = botById(j.from);
-      const tone = j.status === 'running' ? 'text-amber-300' : j.status === 'done' ? 'text-emerald-300' : j.status === 'lost' ? 'text-rose-300' : 'text-zinc-400';
-      return `<div class="px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10.5px]">
-        <div class="flex items-center justify-between gap-2"><span class="truncate"><span class="font-mono-sf text-zinc-400">${esc(j.id)}</span> <span style="color:${fb ? fb.color : '#aaa'}">${esc(j.from)}</span> · ${esc(j.label)}</span><span class="font-mono-sf shrink-0 ${tone}">${j.status === 'running' ? `${PHASE_ZH[j.phase] || ''} ${j.progress}%` : ({ queued: 'Waiting', submitted: '⏳ Submitted', done: '✓', lost: 'stopped' })[j.status]}</span></div>
-        ${j.status === 'running' ? `<div class="mt-1 h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bar-shimmer" style="width:${j.progress}%"></div></div>` : ''}
-      </div>`;
+      const [lab, tone] = ST[j.status] || [j.status, 'zinc'];
+      const head = `${chip(j.id, 'zinc')}<span class="shrink-0 text-[10.5px] font-mono-sf" style="color:${fb ? fb.color : '#aaa'}">${esc(j.from)}</span><span class="min-w-0 truncate text-[10.5px] text-zinc-300" title="${esc(j.title || j.label || '')}">${esc(fitLine(j.label, 24) || '')}</span>${chip(j.status === 'running' ? `▶ ${j.progress || 0}%` : lab, tone)}`;
+      const body = max > 3 && (j.title || j.summary || j.result) ? [j.title, j.summary, typeof j.result === 'string' ? j.result : ''].filter(Boolean).map(x => `<div>${esc(String(x))}</div>`).join('') : '';
+      return `${foldRow(`job:${j.id}`, head, body)}${j.status === 'running' ? `<div class="mx-2 -mt-0.5 mb-1 h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bar-shimmer" style="width:${j.progress}%"></div></div>` : ''}`;
     }).join('');
   }
   function workerBody(n) {
@@ -4137,14 +4461,18 @@
     const rank = { review: 0, merging: 0, verify: 0, queued: 0, reverted: 1, rejected: 1, failed: 1, verified: 2, interrupted: 3 };
     const list = n.mrs.slice().sort((a, b) => rank[a.status] - rank[b.status] || b.t - a.t).slice(0, max);
     if (!list.length) return '<div class="text-[10.5px] text-zinc-500">No merge requests yet.</div>';
+    const ST = { verified: ['✓ match', 'green'], reverted: ['↩ reverted', 'red'], failed: ['✕ failed', 'red'], rejected: ['⛔ rejected', 'red'],
+      queued: ['⏳ queued', 'amber'], review: ['⏳ review', 'amber'], merging: ['⏳ merge', 'amber'], verify: ['⏳ re-verify', 'amber'], interrupted: ['■ stopped', 'zinc'] };
     return list.map(m => {
       const fb = botById(m.from);
-      const tone = m.status === 'verified' ? 'text-emerald-300' : m.status === 'reverted' ? 'text-rose-300' : 'text-fuchsia-200';
-      const lab = m.kind === 'retract' && m.status === 'verified' ? '↩ Retracted' : MR_LABEL[m.status];
-      return `<div class="px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10.5px]">
-        <div class="flex items-center justify-between gap-2"><span class="truncate"><span class="font-mono-sf text-zinc-400">${esc(m.id)}</span> ${m.kind === 'retract' ? '↩ ' : ''}${esc(m.nodeId)} <span style="color:${fb ? fb.color : '#aaa'}">← ${esc(m.from)}</span></span><span class="shrink-0 ${tone}">${lab}</span></div>
-        ${max > 3 && m.log.length ? `<div class="mt-1 font-mono-sf text-[10px] text-zinc-400 leading-relaxed">${m.log.map(l => `&gt; ${esc(l)}`).join('<br>')}</div>` : ''}
-      </div>`;
+      const [lab, tone] = m.kind === 'retract' && m.status === 'verified' ? ['↩ retracted', 'amber'] : (ST[m.status] || [m.status, 'zinc']);
+      // review levels from the log: “✓ L1 …”, “✗ L2 …”
+      const lv = (m.log || []).map(l => String(l).match(/^\s*([✓✗✕×])\s*(L\d)\b/)).filter(Boolean).map(x => chip(x[2], x[1] === '✓' ? 'green' : 'red'));
+      const bad = ['failed', 'reverted', 'rejected'].includes(m.status) ? String((m.log || []).slice().reverse().find(l => /[✗✕×]|could not|fail/i.test(l)) || '') : '';
+      const why = !bad ? '' : /limit/i.test(bad) ? '⏸ usage limit' : /conflict/i.test(bad) ? '⚠ conflict' : /timeout|timed out/i.test(bad) ? '⏱ timeout' : /(L\d)/.test(bad) ? `✕ ${bad.match(/(L\d)/)[1]}` : fitLine(bad, 34);
+      const head = `${chip(m.id, 'zinc')}<span class="shrink-0 text-[10.5px] font-mono-sf text-zinc-200">${esc(m.nodeId)}</span><span class="shrink-0 text-[10.5px] font-mono-sf" style="color:${fb ? fb.color : '#aaa'}">← ${esc(m.from)}</span>${lv.join('')}${chip(lab, tone)}${why ? `<span class="min-w-0 truncate text-[10px] text-rose-300/80" title="${esc(why)}">${esc(why.replace(/^>\s*/, ''))}</span>` : ''}`;
+      const body = max > 3 && (m.log || []).length ? `<div class="font-mono-sf text-[10px] text-zinc-400">${m.log.map(l => esc(String(l).replace(/^>\s*/, ''))).join('<br>')}</div>` : '';
+      return foldRow(`mr:${m.id}`, head, body);
     }).join('');
   }
   function gateBody(n) {
@@ -4210,7 +4538,7 @@
         }, 800);
       }, 400 + i * 120);
     });
-    later(() => mcSay(`📣 main updated to **v${entry.v}** (${entry.hash}): ${entry.summary}\nNotified ${sgs.length} sub-goals, ${tasks.length} tasks; ${pulled} tasks pulled the latest main.\n\n🎯 **Blast radius**\n• Key fact that makes this safe: the regression after merging matches what we expected (confidence 4/5: actually run, not just claimed)\n• Affected: ${hitList.length ? hitList.join(', ') + '(uses it, updated to the latest)' : 'none'}\n• Ruled out: ${clearList.join(', ') || 'none'}`), 400 + tasks.length * 120 + 900);
+    later(() => { state.mc.messages.push({ sender: 'system', text: `📣 main updated v${entry.v} (${entry.hash}): ${entry.summary}\nNotified ${sgs.length} sub-goals, ${tasks.length} tasks; ${pulled} tasks pulled the latest main.\n\n🎯 **Blast radius**\n• Key fact that makes this safe: the regression after merging matches what we expected (confidence 4/5: actually run, not just claimed)\n• Affected: ${hitList.length ? hitList.join(', ') + '(uses it, updated to the latest)' : 'none'}\n• Ruled out: ${clearList.join(', ') || 'none'}` }); if (isMC()) renderDrawerMessages(); save(); }, 400 + tasks.length * 120 + 900);
   }
 
   /* ---------------- Inverted-pyramid checks + auto checks ("All code is slop except mine") ----------------
@@ -4404,10 +4732,38 @@
     if (!state.decisions) state.decisions = [];
     state.decisions.push({ t, ts: new Date(t).toISOString(), phase, decision, why, evidence, result });
   }
+  // compact lists (decision log, merge requests, jobs): one line of tags and colors; click a line for the details
+  const foldOpen = new Set();
+  const chip = (text, tone = 'zinc', title = '') => `<span class="shrink-0 px-1.5 py-[1px] rounded-md text-[10px] font-mono-sf ${({
+    zinc: 'bg-white/[0.07] text-zinc-300', green: 'bg-emerald-500/15 text-emerald-300', red: 'bg-rose-500/15 text-rose-300', amber: 'bg-amber-500/15 text-amber-200',
+    violet: 'bg-violet-500/15 text-violet-200', fuchsia: 'bg-fuchsia-500/15 text-fuchsia-200', sky: 'bg-sky-500/15 text-sky-200', teal: 'bg-teal-500/15 text-teal-200' })[tone] || ''}"${title ? ` title="${esc(title)}"` : ''}>${esc(text)}</span>`;
+  const idChips = (t, max = 3) => [...new Set(String(t || '').match(/\b(?:MR-\d+|J-\d+|SG-\d+|T-\d+(?:\.\d+)*|A-\d+[a-z]+(?:\.\d+)*)\b/g) || [])].slice(0, max);
+  function foldRow(key, head, body) {
+    const open = foldOpen.has(key);
+    return `<div class="rounded-lg bg-white/[0.035] border border-white/[0.06]">
+      <button data-fold="${esc(key)}" class="w-full px-2 py-1 flex items-center gap-1.5 text-left hover:bg-white/[0.04] rounded-lg">${head}<span class="ml-auto pl-1 text-[10px] text-zinc-500">${body ? (open ? '▾' : '▸') : ''}</span></button>
+      ${open && body ? `<div class="px-2.5 pb-2 pt-0.5 text-[10.5px] leading-relaxed text-zinc-300 selectable-text">${body}</div>` : ''}</div>`;
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('[data-fold]');
+    if (!b) return;
+    const k = b.dataset.fold;
+    if (foldOpen.has(k)) foldOpen.delete(k); else foldOpen.add(k);
+    const box = $('drawer-actions'), top = box ? box.scrollTop : 0;
+    renderActions(); refreshCard('QA'); ['W-CLOUD', 'W-BATCH'].forEach(refreshCard);
+    if (box) box.scrollTop = top;
+  });
   function decisionsHtml() {
-    const rows = (state.decisions || []).slice(-6).reverse();
-    return rows.length ? rows.map(d => `<div class="text-[11px] mb-1 leading-snug"><span class="font-mono-sf text-zinc-500">${fmtTime(d.t).slice(5)}</span> <span class="text-sky-200">[${esc(d.phase)}]</span> ${esc(d.decision)} <span class="text-zinc-500">— ${esc(d.why)}</span> <span class="font-mono-sf text-emerald-300">${esc(d.result)}</span></div>`).join('')
-      : '<div class="text-[11px] text-zinc-500">No decisions logged yet.</div>';
+    const rows = (state.decisions || []).slice(-8).reverse();
+    if (!rows.length) return '<div class="text-[11px] text-zinc-500">No decisions logged yet.</div>';
+    const PH = { Merge: 'fuchsia', Handoff: 'violet', Fold: 'zinc', Adopt: 'green', Retract: 'amber', Policy: 'sky', Plan: 'sky', Split: 'sky', Ask: 'amber' };
+    const res = (r) => /match|ok|verified|pass|done|adopted/i.test(r) ? chip('✓', 'green', r) : /fail|revert|reject|error/i.test(r) ? chip('✕', 'red', r) : /fold/i.test(r) ? chip('⤴', 'zinc', r) : r ? chip(String(r).slice(0, 10), 'zinc', r) : '';
+    return `<div class="space-y-1">${rows.map(d => {
+      const ids = idChips(d.decision);
+      const head = `<span class="shrink-0 font-mono-sf text-[10px] text-zinc-500">${esc(new Date(d.t).toTimeString().slice(0, 5))}</span>${chip(d.phase, PH[d.phase] || 'zinc')}${ids.length ? ids.map(i => chip(i, 'zinc')).join('') : `<span class="min-w-0 truncate text-[10.5px] text-zinc-300">${esc(fitLine(d.decision, 30) || '')}</span>`}${res(d.result)}`;
+      const body = [d.decision, d.why, d.evidence].filter(Boolean).map((x, i) => `<div class="${i ? 'mt-1 text-zinc-400' : ''}">${formatChatText(String(x))}</div>`).join('');
+      return foldRow(`dec:${d.t}:${d.phase}`, head, body);
+    }).join('')}</div>`;
   }
   function downloadDecisions() {
     const cell = (v) => { let c = String(v ?? '').replace(/[\t\r\n]+/g, ' '); if (/^[=+\-@]/.test(c)) c = "'" + c; return c; };
@@ -5187,7 +5543,7 @@
   /* ---------------- Search (Ctrl+K): cards and bots by id / title / status, with status filters ---------------- */
   let searchSel = 0, searchFilter = '';
   function nodeStatusZh(n) {
-    if (n.tier === 'step') return ({ done: 'done', running: 'Running', waiting: 'Waiting for you', pending: 'Not started' })[n.status] || '';
+    if (n.tier === 'step') return ({ done: 'done', running: 'Running', waiting: 'Waiting for you', pending: 'Not started', skipped: 'Skipped', hold: 'On hold' })[n.status] || '';
     if (n.tier === 'approach') return n.merged ? 'Adopted' : n.retracted ? 'Retracted' : ({ ready: 'To validate', validating: 'Validating', passed: 'passed', failed: 'failed' })[n.status] || '';
     if (n.tier === 'task') return n.done ? 'done' : running.has(n.id) ? 'Running' : n.mode ? 'In progress' : 'No workflow yet';
     if (n.tier === 'subgoal') return sgDone(n.id) ? 'done' : sgLocked(n) ? 'Waiting on prerequisites' : 'In progress';
@@ -5401,7 +5757,7 @@
     const cmp = (label, a, b, fmt = (x) => x) => `<div class="grid grid-cols-[96px_64px_24px_1fr] items-center text-[12px]"><span class="text-zinc-500">${label}</span><span class="text-zinc-400 text-right">${a == null ? '—' : fmt(a)}</span><span class="text-zinc-600 text-center">→</span><span class="text-white font-bold">${fmt(b)}</span></div>`;
     ov.innerHTML = `
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-5">
-        <div class="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 mb-3 bg-[#08090C]/85 backdrop-blur-xl flex items-center gap-2 text-[11px] text-zinc-500"><span class="text-[12px] text-zinc-400">Away mode · every entry comes with a reason</span>
+        <div class="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 mb-3 bg-[#08090C]/85 backdrop-blur-xl flex items-center gap-2 text-[11px] text-zinc-500"><span class="text-[12px] text-zinc-400">Dashboard · what happened while you were away</span>
           <button data-act="close-away" class="ml-auto min-h-[32px] px-4 rounded-full bg-white text-black font-semibold text-[13px] hover:bg-zinc-200 active:scale-[0.97]">Back to the map</button></div>
         <div class="grid grid-cols-[56px_1fr] sm:flex sm:flex-wrap items-center gap-x-4 gap-y-3 pb-4 border-b border-white/[0.08]">
           <div class="w-14 h-14 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] overflow-hidden">${mcSvg()}</div>
@@ -5715,8 +6071,13 @@
     $('report-body').innerHTML = `
       <div class="p-3 rounded-2xl mb-4 ${pass ? 'bg-emerald-500/10 border border-emerald-400/30' : 'bg-rose-500/10 border border-rose-400/30'}">
         <div class="text-[12px] font-semibold ${pass ? 'text-[#30D158]' : 'text-[#FF453A]'} mb-0.5 inline-flex items-center gap-1.5"><i class="w-1.5 h-1.5 rounded-full bg-current"></i>${pass ? 'In one line: it works' : 'In one line: it does not work'}</div>
-        <div class="text-[14px] text-white font-semibold leading-snug">${esc(h.summary || h.reason)}</div>
+        <div class="text-[14px] text-white font-semibold leading-snug">${esc(LIVE ? oneLine(h.summary || h.reason) : (h.summary || h.reason))}</div>
       </div>
+      ${LIVE ? `${h.contract || h.resultData ? sec('📊 Result', resultHtml(h, true).replace('lod-detail ', '')) : ''}
+      ${sec(pass ? '✅ Why it works' : '❌ Why it failed', esc(h.reason))}
+      ${h.lesson ? sec('📚 What we learned', esc(h.lesson)) : ''}
+      ${h.next ? sec('➡️ Suggested next step', esc(h.next)) : ''}
+      ${h.summary && oneLine(h.summary) !== String(h.summary).trim() ? `<details class="mb-3"><summary class="text-[12px] font-semibold text-zinc-400 cursor-pointer">Details</summary><div class="mt-1 text-[12.5px] text-zinc-300 leading-relaxed whitespace-pre-wrap">${esc(h.summary)}</div></details>` : ''}` : `
       ${sec('🎯 Goal', m && !isMethod(h) ? `to test “${esc(h.title)}” bring ${esc(m.name)} From ${fmtVal(m, mn.metric.value)} down to ${esc(targetText(m).replace('target ', ''))}.` : `Check whether “${esc(h.title)}” works.`)}
       ${sec('🛠 How', `Settings <code class="px-1.5 py-0.5 rounded bg-black/50 text-sky-300 font-mono-sf text-[11px]">${esc(h.params || '—')}</code>, owned by ${b ? b.id : 'Bot'} On branch <code class="px-1.5 py-0.5 rounded bg-black/50 text-sky-300 font-mono-sf text-[11px]">exp/${esc(h.id.toLowerCase())}</code> ran it on the batch worker and compared with the reference. ${visibleKids(h).length ? `Along the way it first went through a ${visibleKids(h).length} -step sub-plan.` : ''}`)}
       ${chart}
@@ -5724,7 +6085,7 @@
       ${sec(pass ? '✅ Why it works' : '❌ Why it failed', esc(h.reason))}
       ${sec('🔢 Can we trust this number? (explain-the-number)', `Ran 3 times on the batch worker, spread ± ${m && !isMethod(h) ? fmtVal({ ...m, sign: false }, Math.abs(h.result.value) * 0.04) + ' ' + esc(m.unit) : 'small'}, far smaller than the distance to the target. Limiting factor: ${visibleKids(h).length ? 'the fit accuracy of the sub-plan' : 'the resolution of the model'}. Ruled out: cached results, running only part of the cases, comparing against the wrong reference.`)}
       ${sec('📚 What we learned', esc(h.lesson))}
-      ${sec('➡️ Suggested next step', esc(h.next))}
+      ${sec('➡️ Suggested next step', esc(h.next))}`}
       ${state.mc.policies.length ? `<div class="text-[11px] text-amber-200/80">📜 Per MC policy: ${esc(state.mc.policies.map(p => p.text).join('; '))}</div>` : ''}`;
     $('report-actions').innerHTML = `
       <button data-act="discuss" data-id="${h.id}" class="${btnCls.pri}">Talk to ${b ? b.id : 'Bot'} Discuss</button>
@@ -5736,7 +6097,7 @@
     modal.classList.remove('hidden');
     modal.classList.add('flex');
   }
-  function closeReport() { const m = $('report-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+  function closeReport() { const m = $('report-modal'); m.classList.add('hidden'); m.classList.remove('flex'); if (typeof impWiz !== 'undefined') impWiz = null; }
 
   /* ---------------- Local architecture docs ---------------- */
   const ARCH = {
@@ -5856,7 +6217,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         else { it.check = null; it.checkedBy = null; }
         const t = state.nodes[it.parentId];
         refreshUp(id); refreshDrawerIf([id, it.parentId]);
-        if (t && visibleKids(t).filter(k => k.tier === 'step').every(k => k.status === 'done') && !t.done) completeTaskSteps(t, ownerBot(t.id));
+        if (t && visibleKids(t).filter(k => k.tier === 'step').every(k => isDoneLike(k)) && !t.done) completeTaskSteps(t, ownerBot(t.id));
         else if (t && t.done && it.status !== 'done') { t.done = false; refreshUp(t.id); }
         save();
         return;
@@ -5866,6 +6227,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
       case 'add-approach': return addOneApproach(id);
       case 'append-step': return appendStep(id);
       case 'insert-after': return insertAfter(id);
+      case 'skip-step': case 'hold-step': case 'resume-step': { const r = setStepState(id, act.split('-')[0]); if (!r.ok) toast(r.error, 'amber'); return; }
       case 'make-compare': return makeCompare(id);
       case 'make-subplan': return makeSubplan(id);
       case 'make-subapproach': return makeSubApproaches(id);
@@ -5873,6 +6235,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
       case 'fold': closeReport(); pushUndo(`Fold ${id}`, () => unfold(id, false)); return fold(id);
       case 'unfold': return unfold(id);
       case 'report': return openReport(id);
+      case 'result-view': return openResultView(id);
       case 'discuss': {
         closeReport();
         openNode(id);
@@ -5913,6 +6276,8 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
       case 'promote-policy': { const p = state.mc.policies[Number(id)]; if (!p || p.promoted) return; p.promoted = true; addGuardrail(`Policy: ${p.text}`, 'user', 'Your written policies → automated'); renderActions(); return; }
       case 'handoff': return LIVE ? liveHandoff(id === 'MC' ? 'MC' : id) : doHandoff(id === 'MC' ? 'MC' : botById(id));
       case 'hand-back': return liveHandBack(id);
+      case 'copy-report-note': return liveCopyReportNote(id);
+      case 'copy-cmd': return liveCopyCmd(id);
       case 'take-back': return liveTakeBack(id);
       case 'view-handoff': return openHandoff(id);
     }
@@ -6055,7 +6420,10 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
       toast(label, 'sky');
     };
     $('btn-example').addEventListener('click', () => { if (state.nodes.GOAL.goalSet) return newBoard(buildExampleState, 'Opened the example in a new tab'); resetTo(buildExampleState, 'Loaded the example: launching a new app'); });
-    $('btn-new-goal').addEventListener('click', () => newBoard());
+    $('btn-new-goal').addEventListener('click', () => openNewGoalChoice());
+    $('fold-left').addEventListener('click', () => togglePanelFold('left'));
+    $('fold-right').addEventListener('click', () => togglePanelFold('right'));
+    applyPanelFold();
 
     document.addEventListener('click', e => {
       const a = e.target.closest('[data-act]');
@@ -6065,6 +6433,29 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     });
 
     $('btn-close-drawer').addEventListener('click', closeDrawer);
+    $('btn-close-chat').addEventListener('click', closeDrawer);
+    layoutPanels();
+    window.addEventListener('resize', () => { clearTimeout(layoutPanels._t); layoutPanels._t = setTimeout(layoutPanels, 120); });
+    // card panel width: drag its right edge (remembered per browser)
+    (() => {
+      const cp = $('card-panel'), hd = $('card-resize');
+      const apply = (w) => {
+        if (w == null) { cp.style.width = ''; document.documentElement.style.removeProperty('--cw'); updateNarrow(); return; }
+        cp.style.width = `${Math.round(w)}px`;
+        document.documentElement.style.setProperty('--cw', `${Math.round(w)}px`);
+        updateNarrow();
+      };
+      try { const v = Number(localStorage.getItem('atlas-card-w')); if (v) apply(Math.min(v, window.innerWidth / 2)); } catch (e) { /* storage blocked */ }
+      let x0 = 0, w0 = 0;
+      const move = (e) => {
+        const w = Math.max(300, Math.min(window.innerWidth / 2, w0 + (e.clientX - x0)));
+        apply(w);
+        try { localStorage.setItem('atlas-card-w', String(Math.round(w))); } catch (er) { /* storage blocked */ }
+      };
+      const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.body.style.cursor = ''; cp.style.transition = ''; scheduleScene(); };
+      hd.addEventListener('pointerdown', (e) => { e.preventDefault(); x0 = e.clientX; w0 = cp.offsetWidth; cp.style.transition = 'none'; document.body.style.cursor = 'col-resize'; document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); });
+      hd.addEventListener('dblclick', () => { apply(null); try { localStorage.removeItem('atlas-card-w'); } catch (e) { /* storage blocked */ } scheduleScene(); });
+    })();
     $('btn-toggle-lineage-json').addEventListener('click', () => { state.lineageJsonOpen = !state.lineageJsonOpen; $('drawer-lineage-json').classList.toggle('hidden', !state.lineageJsonOpen); $('lineage-chevron').textContent = state.lineageJsonOpen ? '▲' : '▼'; });
     $('drawer-chat-form').addEventListener('submit', e => {
       e.preventDefault();
@@ -6249,7 +6640,8 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
   const liveBotOf = (agent) => String(agent || '').split('~')[0];
   // a bot answered while you were looking elsewhere: it shows a speech bubble until you open its chat
   function markUnread(node, agent) {
-    const viewing = node ? state.drawerOpen && !isMC() && state.selectedNodeId === node.id : isMC();
+    const sel = state.nodes[state.selectedNodeId];
+    const viewing = node ? state.drawerOpen && !isMC() && !!sel && chatNode(sel) === chatNode(node) : isMC();
     if (viewing) return;
     const o = agent === 'MC' ? state.mc : botById(liveBotOf(agent));
     if (!o) return;
@@ -6260,7 +6652,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
   function clearUnreadShown(mc, n) {
     let hit = false;
     if (mc && state.mc.unread) { delete state.mc.unread; hit = true; renderMC(); }
-    if (n) state.bots.forEach(b => { if (b.unread && b.unread.nodeId === n.id) { delete b.unread; hit = true; } });
+    if (n) state.bots.forEach(b => { const u = b.unread && state.nodes[b.unread.nodeId]; if (b.unread && (b.unread.nodeId === n.id || (u && chatNode(u) === chatNode(n)))) { delete b.unread; hit = true; } });
     if (hit) { renderBots(); renderIsland(); save(); }
   }
   const shortDetail = (s) => { s = String(s || ''); if (/[\\/]/.test(s) && !/\s/.test(s.trim())) return s.split(/[\\/]/).slice(-2).join('/'); return s.length > 60 ? s.slice(0, 57) + '…' : s; };
@@ -6334,9 +6726,9 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     const api = liveApi();
     const msgs = node ? node.messages : state.mc.messages;
     if (!api) { toast('Not connected to the desktop app', 'rose'); return { ok: false, error: 'not connected' }; }
-    const bot = req.agent === 'MC' ? null : botById(liveBotOf(req.agent));
+    const bot = req.agent === 'MC' ? state.mc : botById(liveBotOf(req.agent));
     if (bot && bot.external) {
-      msgs.push({ sender: 'system', text: `🔓 ${bot.id} is handed back to you (you are using its session in a terminal or VS Code). Press “Take back” on the bot first.` });
+      msgs.push({ sender: 'system', text: bot.tg && bot.tg.phase === 'exited' ? `🖥 ${bot.id} was closed in the terminal: press “🔒 Take back” in the left panel (step 4), then chat here.` : `🖥 ${bot.id} is in a terminal right now: type there. To chat here again, follow the steps in the left panel.` });
       renderDrawerMessages(); return { ok: false, error: 'handed back' };
     }
     const key = node ? node.id : '@MC';
@@ -6410,11 +6802,45 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     if (!(res && !res.ok && /stopped/i.test(res.error || ''))) markUnread(node, who.agent);
     if (!res.ok || !res.data) return res;
     const d = res.data;
+    if (d.say && /you'?ve hit your .{0,20}limit|usage limit reached/i.test(d.say) && !(d.actions || []).length) {
+      (node ? node.messages : state.mc.messages).push({ sender: 'system', text: `⏸ Claude usage limit: ${d.say.replace(/\s+/g, ' ').slice(0, 140)}\nNothing was lost; send the message again after the reset.` });
+      toast('⏸ Claude usage limit reached', 'amber'); renderDrawerMessages(); save(); return { ok: false, error: 'usage limit' };
+    }
     if (d.say) (node ? node.messages : state.mc.messages).push({ sender: 'bot', botId: who.agent === 'MC' ? 'MC' : liveBotOf(who.agent), text: d.say });
     setSuggest(node, d.next);
     renderDrawerMessages(); save();
     applyActions(d.actions || [], node, who.agent, text);
     return res;
+  }
+  // cards from before short labels existed: ask once for card-sized keywords, then they look like new cards
+  async function liveShortenOld() {
+    const api = liveApi();
+    if (!api || !api.shorten) return;
+    const items = [];
+    Object.values(state.nodes).forEach(n => {
+      if (n.shortDone) return;
+      if (n.tier === 'approach') {
+        if (!n.label && n.params && !fitLine(n.params, 34)) items.push({ id: n.id, kind: 'label', text: n.params });
+        if (!n.verdict && ['passed', 'failed'].includes(n.status) && n.summary && !fitLine(n.summary, 40)) items.push({ id: `${n.id}#v`, kind: 'verdict', text: `${n.status}: ${n.summary}` });
+      } else if (n.tier === 'step' && !n.verdict && n.result && !fitLine(n.result) && !/^(Blocked|Stopped)/.test(n.result)) items.push({ id: `${n.id}#v`, kind: 'verdict', text: n.result });
+    });
+    if (!items.length) return;
+    toast(`Tidying ${items.length} long card text(s) into short labels…`, 'sky');
+    let r;
+    try { r = await api.shorten(items); } catch (e) { r = { ok: false }; }
+    if (!r || !r.ok) return;
+    const touched = new Set();
+    items.forEach(it => {
+      const v = r.out[it.id];
+      const id = it.id.replace(/#v$/, ''), n = state.nodes[id];
+      if (!n) return;
+      n.shortDone = true;
+      if (!v) return;
+      if (it.kind === 'label') n.label = v; else n.verdict = v;
+      touched.add(id);
+    });
+    touched.forEach(id => refreshCard(id));
+    save();
   }
   // a button = a sentence to the session
   function liveButton(nodeId, sentence) {
@@ -6498,9 +6924,16 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         if (!list.length && a.text) list.push({ title: a.text, idea: '' });
         c.mode = 'approach';
         if (c.tier === 'task' && c.done) reopenTask(c, 'New approach');
-        const ns = list.map(x => addApproach(c, { t: x.title, params: x.idea || '', result: x.result || null }, by));
+        const ns = list.map(x => { const h = addApproach(c, { t: x.title, params: x.idea || '', result: x.result || null }, by); if (x.label) h.label = x.label; return h; });
         grownFrom(ns.map(n => n.id), c.id);
         renderBots(); refreshUp(c.id); refreshDrawerIf([c.id]); renderBotsAll();
+        return;
+      }
+      case 'skip_step': case 'hold_step': case 'resume_step': {
+        const st = tgt && tgt.tier === 'step' ? tgt : src && src.tier === 'step' ? src : null;
+        if (!st) return say(src, `⚠️ ${a.type} needs a step card (target).`);
+        const r = setStepState(st.id, a.type.split('_')[0], by || 'bot');
+        if (!r.ok) say(src, `⚠️ ${r.error}`);
         return;
       }
       case 'insert_steps': {
@@ -6508,7 +6941,9 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         const list = titles(a.steps);
         if (!st) {   // no anchor: append to the container
           const c = tgt || src;
-          if (!c || c.mode !== 'steps') return say(src, '⚠️ insert_steps needs a step card to insert after.');
+          if (c && c.tier === 'task' && !c.mode) { const ns = addSteps(c, list, by); grownFrom(ns.map(n => n.id), c.id); refreshUp(c.id); return; }
+          if (c && c.mode === 'approach') return say(src, `⚠️ ${c.id} works with approaches, not steps: add the step under one of its approaches, or add another approach.`);
+          if (!c || !stepsLike(c)) return say(src, '⚠️ insert_steps needs a step card to insert after.');
           const ns = addSteps(c, list, by);
           grownFrom(ns.map(n => n.id), c.id); refreshUp(c.id); return;
         }
@@ -6539,7 +6974,16 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         const kind = /batch/i.test(a.worker || '') ? 'BATCH' : 'CLOUD';
         const n = tgt || src;
         if (!a.text) return;
-        liveWorkerJob(kind, a.text, botById(by), n).then(r => { if (n) liveAsk(n, jobMessage(kind, r, null)); });
+        const asker = by === 'MC' ? state.mc : botById(by);
+        liveWorkerJob(kind, a.text, botById(by), n).then(r => {
+          const msg = jobMessage(kind, r, null);
+          if (asker && asker.external) {   // the bot that asked is in a terminal: it reads the result with `replies`
+            try { liveApi().post_reply(by === 'MC' ? 'MC' : by, kind, msg, 'your job'); } catch (e) { /* ignore */ }
+            (n ? n.messages : state.mc.messages).push({ sender: 'system', text: `📤 ${kind} result left for ${by} in the terminal (it reads it with replies).` });
+            return;
+          }
+          if (n) liveAsk(n, msg);
+        });
         return;
       }
       case 'import_session': {
@@ -6572,6 +7016,10 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         if (a.type === 'plan_branch') return planBranch(c.id, { decide: a.decide || 'Find out which case applies', branches: (a.steps || []).filter(x => x && x.title).map(x => ({ t: x.title, when: x.when || '', detail: x.detail || '', result: x.result || null })) }, by);
         if (a.type === 'plan_matrix') return planMatrix(c.id, { rows: { name: a.rows_name || 'Row', values: (a.rows || []).map(String) }, cols: { name: a.cols_name || 'Column', values: (a.cols || []).map(String) }, metric: a.metric || 'Score', better: a.better, detail: a.text || '' }, by);
         return planStageGate(c.id, (a.steps || []).filter(x => x && x.title).map(x => ({ t: x.title, detail: x.detail || '', result: x.result || null, gate: { t: x.gate || `Gate after “${x.title}”`, kind: x.gate_kind === 'check' ? 'check' : 'human', criteria: x.criteria || '' } })), by);
+      }
+      case 'organize': {
+        if (impWiz && impWiz.step <= 5) { impWiz.proposal = a; impWiz.waiting = false; renderImpWizard(); return; }   // the guide shows it first
+        return applyOrganize(a);
       }
       case 'set_result': {
         const isRes = (x) => x && (x.tier === 'step' || x.tier === 'approach');
@@ -6659,6 +7107,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         if (!step.contract) step.contract = { type: step.resultData.type };
       }
       step.result = d.summary;
+      step.verdict = d.verdict || '';
       if (d.choice != null) step.choice = d.choice;
       step.check = { ok: !!(d.check && d.check.ok), text: (d.check && d.check.text) || '' };
       step.output = files.length ? { kind: 'file', label: (d.output && d.output.label) || 'Files', files } : { kind: 'text', label: (d.output && d.output.label) || 'Result', text: d.summary };
@@ -6690,7 +7139,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
       }
       const pass = d.status === 'passed';
       h.outcome = pass ? 'pass' : 'fail';
-      h.liveSummary = d.summary; h.reason = d.reason; h.lesson = d.lesson; h.next = d.next; h.score = d.score;
+      h.liveSummary = d.summary; h.reason = d.reason; h.lesson = d.lesson; h.next = d.next; h.score = d.score; h.verdict = d.verdict || '';
       h.result = { value: d.score ?? (pass ? 100 : 0), rmse: 0 };
       if (d.result && d.result.type) { h.resultData = { ...d.result, type: (normContract(d.result) || {}).type || 'text' }; if (!h.contract) h.contract = { type: h.resultData.type }; }
       h.log.push({ t: `${pass ? '[PASS]' : '[FAIL]'} ${d.summary}`, tone: pass ? 'ok' : 'err' });
@@ -6777,12 +7226,16 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
       if (qa) qa.status = 'FAIL';
       mr.log.push(`✕ ${summary}`);
       const ob = ownerBot(task ? task.id : node.id);
-      const text = `❌ ${mr.id} did not pass review: ${summary}\nTell ${ob ? ob.id : 'the bot'} to fix it (for example “fix what QA found”), then send it to review again.`;
-      node.messages.push({ sender: 'bot', botId: 'QA', text });
-      if (task && task !== node) task.messages.push({ sender: 'bot', botId: 'QA', text });
+      const limit = /hit your .{0,20}limit|usage limit/i.test(summary || '');
+      const text = limit   // QA ran out of usage: nothing is wrong with the work
+        ? `⏸ QA stopped: Claude usage limit${((summary || '').match(/resets [^\n]+/) || [''])[0] ? ` (${(summary.match(/resets [^\n]+/))[0].replace(/\s+$/, '')})` : ''}. Nothing to fix: send it to review again after the reset.`
+        : `❌ Did not pass review: ${summary}\nTell ${ob ? ob.id : 'the bot'} to fix it (for example “fix what QA found”), then send it to review again.`;
+      const who = limit ? 'system' : 'bot';   // a usage-limit pause is one tag line
+      node.messages.push({ sender: who, botId: 'QA', text });
+      if (task && task !== node) task.messages.push({ sender: who, botId: 'QA', text });
       logDecision('Merge', `${mr.id} ${node.id}`, summary, mr.id, 'failed');
-      if (qa) reportToMC(qa, `${mr.id} ${node.id} did not pass review`, 'err');
-      toast(`✕ QA: ${node.id} did not pass review`, 'rose');
+      if (qa) reportToMC(qa, limit ? `${node.id} review paused: usage limit` : `${node.id} did not pass review`, limit ? 'warn' : 'err');
+      toast(limit ? `⏸ QA: usage limit, ${node.id} not reviewed yet` : `✕ QA: ${node.id} did not pass review`, limit ? 'amber' : 'rose');
     }
     qaFinish(mr);
     refreshUp(node.id); refreshCard('QA'); renderBotsAll(); refreshDrawerIf([node.id, 'QA']); renderDrawerMessages();
@@ -6809,20 +7262,321 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     try { await navigator.clipboard.writeText(r.command); } catch (e) { /* clipboard blocked */ }
     return r;
   }
+  // “Continue in terminal”: a guide with four steps that tick themselves
+  //   copy → paste (ticks when orbmap sees the session open) → /exit there (ticks when it closes) → Take back
   async function liveHandBack(botId) {
     const b = botId === 'MC' ? state.mc : botById(botId);
-    const r = await liveSessionCommand(botId);
-    if (!r || !b) return;
+    if (!b || b.external) return;
+    const tok = {};
+    b._handTok = tok;
+    if (!(await liveApi().session_command(botId === 'MC' ? 'MC' : botId)).ok) { toast('This bot has not talked to Claude yet', 'amber'); return; }
+    if (b._handTok !== tok) return;   // cancelled meanwhile
     b.external = true;
+    b.extSince = Date.now() / 1000;
+    b.extSeen = [];
+    b.extPending = true; b.extPendingAt = Date.now();   // until the terminal opens it
+    b.tg = { phase: 'copy', copied: false };
     const where = botId === 'MC' ? state.mc.messages : (state.nodes[b.homeId] || {}).messages;
-    if (where) where.push({ sender: 'system', text: `🔓 Handed back to you. orbmap sends this session nothing until you press “Take back”.\nContinue it in a terminal or the VS Code terminal (Ctrl + backtick), command copied to the clipboard:\n\`${r.command}\`` });
-    toast('Command copied; orbmap leaves this session alone', 'sky');
+    if (where) where.push({ sender: 'system', text: '🖥 Moving this chat to a terminal: follow the steps in the left panel. orbmap mirrors the terminal chat here.' });
     renderBotsAll(); renderDrawer(); save();
+  }
+  const TERMINAL_ACT_HELP = `
+
+## Actions for report.py act <file.json> (a JSON object or a list)
+- {"type":"plan_steps","target":"T-3","steps":[{"title":"…","detail":"…"}]}  (also plan_approaches with "approaches":[{"title","idea","label"}], plan_checklist, plan_loop with metric/goal_value/better/max_rounds, plan_fanout with map/reduce, plan_branch with decide and steps[].when, plan_matrix with rows_name/rows/cols_name/cols/metric, plan_stagegate with steps[].gate/gate_kind/criteria)
+- {"type":"skip_step","target":"T-3.6"}  {"type":"hold_step","target":"T-3.6"}  {"type":"resume_step","target":"T-3.6"}   (skip = not done and not needed; hold = keep it for later, the task waits for it)
+- {"type":"subplan","target":"T-3.2","steps":[{"title":"…"}]}   {"type":"add_policy","text":"…"}   {"type":"note","target":"T-3","text":"…"}
+- {"type":"set_result","target":"T-3.2","result":{"type":"table","columns":["…"]}}   {"type":"request_merge","target":"T-3"}   {"type":"start","target":"T-3"}
+- {"type":"submit_job","worker":"CLOUD","text":"…"}   {"type":"propose_split","goal":"…","subgoals":[{"title":"…","deps":[]}]}   {"type":"organize","goal":"…","subgoals":[{"title":"…","tasks":["T-1"]}]}
+`;
+  async function liveCopyCmd(botId) {
+    const b = botId === 'MC' ? state.mc : botById(botId);
+    try { await liveApi().write_context(botId, liveContext(botId === 'MC' || !b ? null : state.nodes[b.homeId], botId) + TERMINAL_ACT_HELP); if (b) b._ctxSent = null; } catch (e) { /* later */ }
+    const r = await liveSessionCommand(botId);
+    if (!r) return;
+    if (b && b.tg && b.tg.phase === 'copy') { b.tg.copied = true; b.tg.phase = 'paste'; }
+    else if (b && b.tg) b.tg.copied = true;
+    toast('Copied: paste it into PowerShell and press Enter', 'sky');
+    renderDrawer(); save();
+  }
+  function terminalRowHtml(o, id) {
+    if (!o.external) return `<div class="mt-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border-white/[0.06] border flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[10.5px] font-mono-sf text-zinc-400">
+      <span class="shrink-0 whitespace-nowrap">session ${esc((o.realSession || '').slice(0, 8) || 'not started')}</span>
+      <button data-act="hand-back" data-id="${id}" class="${btnCls.ghost}" title="Talk to this same session in PowerShell; a short guide walks you through it">🖥 Continue in terminal</button></div>`;
+    const tg = o.tg || { phase: o.extPending ? 'paste' : 'live', copied: true };
+    const ph = tg.phase, order = ['copy', 'paste', 'live', 'exited'];
+    const at = order.indexOf(ph);
+    const tick = (done, now) => done ? '<span class="w-5 h-5 shrink-0 rounded-full bg-emerald-500/20 text-emerald-300 grid place-items-center text-[11px]">✓</span>'
+      : `<span class="w-5 h-5 shrink-0 rounded-full border ${now ? 'border-amber-300 text-amber-200' : 'border-white/15 text-zinc-500'} grid place-items-center text-[10px]">${now ? '•' : ''}</span>`;
+    const row = (n, done, now, text, right = '') => `<div class="flex items-center gap-2 py-1 ${!done && !now ? 'opacity-50' : ''}">${tick(done, now)}<div class="min-w-0 flex-1 text-[11.5px] ${now ? 'text-white' : 'text-zinc-300'}"><span class="font-mono-sf text-zinc-500 mr-1">${n}</span>${text}</div>${right}</div>`;
+    const wait = (t) => `<span class="text-[10.5px] text-amber-200 whitespace-nowrap"><span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse mr-1"></span>${t}</span>`;
+    const copyDone = tg.copied || at >= 2;
+    return `<div class="mt-1.5 px-3 py-2 rounded-xl bg-amber-500/[0.07] border border-amber-400/30">
+      <div class="flex items-center justify-between mb-1"><div class="text-[12px] font-semibold text-amber-100">🖥 Continue in a terminal</div>${at <= 1 ? `<button data-act="take-back" data-id="${id}" class="text-[10.5px] text-zinc-400 hover:text-white">Cancel</button>` : ''}</div>
+      ${row(1, copyDone, !copyDone, 'Copy the command', `<button data-act="copy-cmd" data-id="${id}" class="${btnCls.ghost}">📋 Copy</button>`)}
+      ${row(2, at >= 2, copyDone && at < 2, 'Paste it into PowerShell and press Enter', at < 2 && copyDone ? wait('waiting…') : at >= 2 ? '<span class="text-[10.5px] text-emerald-300">connected</span>' : '')}
+      ${at === 2 ? `<div class="ml-7 mb-1">${extActivityHtml(o) || '<div class="text-[10.5px] text-zinc-400">Connected. What you say there shows up in this chat.</div>'}</div>` : ''}
+      ${row(3, at >= 3, at === 2, 'When you are done there: type <code class="px-1 rounded bg-black/40 text-amber-200">/exit</code> (or close the window)', at === 2 ? wait('open') : at >= 3 ? '<span class="text-[10.5px] text-emerald-300">closed</span>' : '')}
+      ${row(4, false, at === 3, 'Bring it back here', `<button data-act="take-back" data-id="${id}" ${at === 3 ? '' : 'disabled title="Close it in the terminal first (step 3)"'} class="${btnCls.ghost} disabled:opacity-35">🔒 Take back</button>`)}
+    </div>`;
+  }
+  // a handed-back session keeps working in your terminal: orbmap only watches its transcript (never sends anything)
+  const EXT_ACTIVE_S = 25;
+  let watchBusy = false;
+  async function liveWatchExternal() {
+    if (watchBusy) return;
+    watchBusy = true;
+    try { await liveWatchExternalOnce(); } finally { watchBusy = false; }
+  }
+  async function liveWatchExternalOnce() {
+    const api = liveApi();
+    if (!api || !api.external_activity) return;
+    let open = null;
+    try { const r = await api.sessions_open_elsewhere(); if (r && r.ok) open = Object.fromEntries(Object.entries(r.open).map(([k, v]) => [ownAgentId(k), v]).filter(([k]) => k)); } catch (e) { open = null; }
+    if (open) [state.mc, ...liveBots()].filter(x => x && !x.clone).forEach(b => {
+      const id = b === state.mc ? 'MC' : b.id, isOpen = !!open[id];
+      const where = b === state.mc ? state.mc.messages : (state.nodes[b.homeId] || {}).messages;
+      if (b.tg) {                                     // the guided way: tick the steps, never switch back by itself
+        const ph = b.tg.phase;
+        if (isOpen && (ph === 'copy' || ph === 'paste')) { b.tg.phase = 'live'; b.tg.copied = true; b.extPending = false; b.extSince = Math.min(b.extSince || 1e12, Date.now() / 1000 - 5); }
+        else if (!isOpen && ph === 'live') b.tg.phase = 'exited';
+        else if (isOpen && ph === 'exited') b.tg.phase = 'live';
+        if (b.tg.phase !== ph) { renderBotsAll(); if (state.drawerOpen) renderDrawer(); save(); }
+        return;
+      }
+      if (isOpen && !b.external) {
+        b.external = true; b.extSince = Date.now() / 1000 - 5; b.extSeen = [];
+        if (where) where.push({ sender: 'system', text: `🖥 ${id} is open in a terminal (or VS Code): this chat mirrors it. Close it there (/exit) and you can chat here again.` });
+        renderBotsAll(); if (state.drawerOpen) renderDrawer();
+      } else if (isOpen) b.extPending = false;
+      else if (b.external && !b.extPending) {
+        b.external = false; delete b.extAct;
+        if (b !== state.mc) b.status = 'IDLE';
+        if (where) where.push({ sender: 'system', text: `↩ ${id} was closed in the terminal: chat here again. It remembers everything said there.` });
+        renderBotsAll(); if (state.drawerOpen) renderDrawer(); save();
+      } else if (b.external && b.extPending && Date.now() - (b.extPendingAt || 0) > 10 * 60000) b.extPending = false;
+    });
+    for (const b of [state.mc, ...liveBots()].filter(x => x && x.external)) {
+      const id = b === state.mc ? 'MC' : b.id;
+      const ctxText = liveContext(b === state.mc ? null : state.nodes[b.homeId], id) + TERMINAL_ACT_HELP;
+      if (ctxText !== b._ctxSent) { try { await api.write_context(id, ctxText); b._ctxSent = ctxText; } catch (e) { /* later */ } }
+      let r;
+      try { r = await api.external_activity(id); } catch (e) { r = null; }
+      if (!r || !r.ok) continue;
+      const was = JSON.stringify(b.extAct || {});
+      b.extAct = { age: r.age, text: r.text, tool: r.tool, todos: r.todos, at: Date.now() };
+      const busy = r.age < EXT_ACTIVE_S;
+      if (b !== state.mc) b.status = busy ? 'VALIDATING' : 'IDLE';
+      await liveMirrorTerminal(b);
+      if (was !== JSON.stringify(b.extAct) || busy) {
+        if (b === state.mc) renderMC(); else renderBots();
+        renderIsland();
+        if (state.drawerOpen) { renderDrawerSession(); }
+      }
+    }
+  }
+  async function liveMirrorTerminal(b) {
+    const api = liveApi(), id = b === state.mc ? 'MC' : b.id;
+    if (!api.external_transcript) return;
+    if (!b.extSince) b.extSince = Date.now() / 1000 - 3600;   // handed back before mirroring existed: the last hour
+    let r;
+    try { r = await api.external_transcript(id, b.extSince || 0); } catch (e) { r = null; }
+    if (!r || !r.ok || !r.items.length) return;
+    const where = b === state.mc ? state.mc.messages : (state.nodes[b.homeId] || {}).messages;
+    if (!where) return;
+    const seen = new Set(b.extSeen || []);
+    let botSaid = false;
+    r.items.forEach(it => {
+      if (!it.id || seen.has(it.id)) return;
+      seen.add(it.id);
+      where.push(it.role === 'user' ? { sender: 'user', text: it.text, via: 'terminal' } : { sender: 'bot', botId: id, text: it.text, via: 'terminal' });
+      if (it.role === 'assistant') botSaid = true;
+    });
+    b.extSeen = [...seen].slice(-400);
+    if (botSaid) markUnread(b === state.mc ? null : state.nodes[b.homeId], id);
+    renderDrawerMessages(); save();
+  }
+  // agent ids on the back end carry the tab prefix (b2_T-1 on the second tab); this tab only handles its own
+  function ownAgentId(id) {
+    const ns = boardNs(), s0 = String(id || '');
+    if (!s0) return '';
+    if (ns) return s0.startsWith(ns) ? s0.slice(ns.length) : null;
+    return /^b[a-z0-9]+_/.test(s0) ? null : s0;
+  }
+  let inboxBusy = false;
+  // a session added itself (report.py join): ask the human what it becomes
+  async function liveCopyJoin() {
+    let r;
+    try { r = await liveApi().join_text(); } catch (e) { r = null; }
+    if (!r || !r.ok) return;
+    try { await navigator.clipboard.writeText(r.text); } catch (e) { /* clipboard blocked */ }
+    toast('Copied: paste it into the Claude Code session you want to add (VS Code or terminal)', 'sky');
+  }
+  const joinQueue = [];
+  function liveJoinRequest(j) {
+    joinQueue.push(j);
+    toast(`📥 “${j.title}” asks to join the map`, 'sky');
+    if (joinQueue.length === 1) showJoin();
+  }
+  async function showJoin() {
+    const j = joinQueue[0];
+    if (!j) return;
+    if ((state.importedSessions || []).includes(j.session) || Object.values(state.nodes).some(n => n.imported && n.imported.session === j.session)) {
+      joinQueue.shift(); toast(`“${j.title}” is already on the map`, 'amber');
+      if (joinQueue.length) later(showJoin, 300);
+      return;
+    }
+    if (impWiz) {   // the import guide is open: add it to the list there
+      impWiz.all = (impWiz.all || []).concat([{ id: j.session, name: j.title, cwd: j.cwd, first: '(added from the session itself)', messages: 2, last: new Date().toISOString(), joined: true }]);
+      if (impWiz.picks) impWiz.picks[j.session] = { on: true, title: j.title, kind: 'task' };
+      joinQueue.shift(); renderImpWizard(); return;
+    }
+    let open = [];
+    try { const r = await liveApi().sessions_running([j.session]); open = (r && r.open) || []; } catch (e) { /* ignore */ }
+    const sgs = sgOrder();
+    $('report-kicker').textContent = 'ADD A SESSION';
+    $('report-title').textContent = j.title;
+    $('report-body').innerHTML = `<div class="text-[12px] font-mono-sf text-zinc-400 mb-3 break-all">${esc(j.cwd)} · ${esc(j.session.slice(0, 8))}</div>
+      <label class="block text-[12px] text-zinc-400 mb-1">It becomes</label>
+      <select id="join-as" class="w-full mb-3 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[13px] text-zinc-100">
+        ${sgs.map(sg => `<option value="${sg.id}">A project (task) under ${esc(sg.id)} ${esc(sg.title)}</option>`).join('')}
+        <option value="NEWSG">A project (task) under a new sub-goal</option>
+        <option value="MC">MC (the coordinator)</option>
+        ${WORKERS.map(w => `<option value="${w.id}">${esc(w.title)} (takes jobs from other bots)</option>`).join('')}
+      </select>
+      <label class="block text-[12px] text-zinc-400 mb-1">Title</label>
+      <input id="join-title" value="${esc(j.title)}" class="w-full mb-3 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[13px] text-zinc-100" />
+      <label class="flex gap-2 items-start text-[12.5px] text-zinc-200 mb-1"><input type="radio" name="join-fork" value="1" checked /> <span><b>Copy</b> (recommended): orbmap works on a copy; your session stays as it is.</span></label>
+      <label class="flex gap-2 items-start text-[12.5px] text-zinc-200"><input type="radio" name="join-fork" value="0" ${open.length ? 'disabled' : ''} /> <span><b>Take over</b>: orbmap continues the same session.${open.length ? ' <span class="text-amber-300">It is open right now: close it first to take it over.</span>' : ''}</span></label>`;
+    $('report-actions').innerHTML = `<button id="join-add" class="${btnCls.pri}">Add to the map</button><button id="join-skip" class="${btnCls.sec}">Ignore</button>`;
+    const modal = $('report-modal'); modal.classList.remove('hidden'); modal.classList.add('flex');
+    const next = () => { joinQueue.shift(); closeReport(); if (joinQueue.length) later(showJoin, 300); };
+    $('join-skip').onclick = next;
+    $('join-add').onclick = async () => {
+      const role = $('join-as').value, title = $('join-title').value.trim() || j.title;
+      const fork = (document.querySelector('input[name=join-fork]:checked') || {}).value !== '0';
+      const wk = WORKERS.find(w => w.id === role);
+      next();
+      await liveImportOne({ id: j.session, folder: j.cwd, name: title, fork, as: role === 'MC' ? 'mc' : wk ? 'worker' : 'task', target: role, worker: wk ? wk.id : null });
+    };
+  }
+  async function liveReadInbox() {
+    if (inboxBusy) return;
+    inboxBusy = true;
+    try { await liveReadInboxOnce(); } finally { inboxBusy = false; }
+  }
+  async function liveReadInboxOnce() {
+    const api = liveApi();
+    if (!api || !api.read_inbox) return;
+    const st0 = state;
+    let r;
+    try { r = await api.read_inbox(state.inboxOffset || 0); } catch (e) { r = null; }
+    if (!r || !r.ok || st0 !== state) return;           // the tab changed meanwhile: its own reader takes it
+    if (r.offset < (state.inboxOffset || 0) && r.offset !== 0) return;
+    state.inboxOffset = r.offset;
+    const seen = new Set(state.inboxSeen || []);
+    (r.items || []).forEach(x => {
+      if (x.id) { if (seen.has(x.id)) return; seen.add(x.id); }
+      if (x.from) { const own = ownAgentId(x.from); if (own === null) return; x.from = own; }   // another tab's bot
+      if (x.join) { if (!x.t || Date.now() / 1000 - x.t < 1800) liveJoinRequest(x.join); return; }   // older than 30 min: stale
+      if (x.press) {
+        const n = state.nodes[normId(String(x.press.card || '').trim())];
+        const B = x.press.button, who = x.from || 'A terminal';
+        const tell = (t) => { (n ? (n.messages || state.mc.messages) : state.mc.messages).push({ sender: 'system', text: t }); if (x.from) liveApi().post_reply(x.from, 'orbmap', t, x.press.verb); };
+        if (B === 'pause-all' || B === 'resume-all') { state.mc.messages.push({ sender: 'system', text: `🖥 ${who} pressed ${x.press.verb} all` }); handleAct(B, ''); return; }
+        if (B === 'accept-proposal') {
+          const i = state.mc.messages.map((m, k) => [m, k]).reverse().find(([m]) => m.kind === 'proposal' && m.status === 'pending');
+          if (!i) return tell(`⚠️ ${who} wanted to accept MC's proposal, but no proposal is waiting.`);
+          state.mc.messages.push({ sender: 'system', text: `🖥 ${who} accepted MC's proposal` }); acceptProposal(i[1]); return;
+        }
+        if (B === 'answer') {
+          const qb = botById(normId(String(x.press.card || ''))) || liveBots().find(b2 => b2.question && b2.homeId === normId(String(x.press.card || '')));
+          if (!qb || !qb.question) return tell(`⚠️ ${who} wanted to answer “${x.press.card}”, but that bot is not waiting on a question.`);
+          const opt = String(x.press.opt || '').trim().toUpperCase().slice(0, 1);
+          if (!opt) return tell(`⚠️ ${who}: answer needs the option letter (A, B, …).`);
+          answerQuestion(qb.id, opt); return;
+        }
+        const ok = ['merge', 'run', 'retract', 'fold', 'unfold', 'finish-task', 'gate-approve', 'gate-reject', 'check-item', 'add-round', 'skip-step', 'hold-step', 'resume-step'].includes(B);
+        if (!ok) return tell(`⚠️ ${who}: orbmap has no button “${x.press.verb}”.`);
+        if (!n) return tell(`⚠️ ${who} wanted to ${x.press.verb} “${x.press.card}”, but there is no such card.`);
+        (n.messages || state.mc.messages).push({ sender: 'system', text: `🖥 ${who} pressed ${x.press.verb} on ${n.id}` });
+        handleAct(B, n.id);
+        return;
+      }
+      if (x.action || x.actions) {
+        let fromId = x.from || 'MC', fb = fromId === 'MC' ? null : botById(fromId);
+        if (!fb && fromId !== 'MC' && state.nodes[fromId]) { fb = ownerBot(fromId); if (fb) fromId = fb.id; }
+        const src = fb ? state.nodes[fb.homeId] : null;
+        const acts = x.actions || [x.action];
+        const box = src ? src.messages : state.mc.messages, n0 = box.length;
+        box.push({ sender: 'system', text: `🖥 ${fromId} from the terminal: ${acts.map(a => a.type).join(', ')}` });
+        applyActions(acts, src, fromId === 'MC' ? 'MC' : fromId, '(from the terminal)');
+        later(() => { const bad = box.slice(n0).filter(m => m.sender === 'system' && /^⚠️/.test(m.text || '')).map(m => m.text);
+          if (bad.length) liveApi().post_reply(fromId, 'orbmap', bad.join('\n'), acts.map(a => a.type).join(', ')); }, 400 * acts.length + 300);
+        return;
+      }
+      const n = state.nodes[normId(String(x.card || '').trim())];
+      if (!n) { if (x.from && x.card) liveApi().post_reply(x.from, 'orbmap', `⚠️ There is no card “${x.card}” on the map, so its status was not changed.`, x.state); return; }
+      if (x.verdict) n.verdict = x.verdict;
+      if (x.summary) { if (n.tier === 'approach') n.summary = x.summary; else n.result = x.summary; }
+      if (n.tier === 'step') n.status = { done: 'done', passed: 'done', running: 'running', blocked: 'waiting', failed: 'waiting' }[x.state] || n.status;
+      if (n.tier === 'approach') n.status = { passed: 'passed', done: 'passed', failed: 'failed', blocked: 'failed', running: 'validating' }[x.state] || n.status;
+      if (n.tier === 'step' && x.state === 'done') n.check = { ok: true, text: x.verdict || 'reported from the terminal' };
+      if (n.tier === 'task' && x.state === 'done' && !n.done) { if (stepsLike(n)) finishTaskSteps(n, ownerBot(n.id)); else if ((n.adopted || []).length) finishTask(n.id); }
+      const box = (state.nodes[n.parentId] || {}).messages;
+      if (box && x.state !== 'running') box.push({ sender: 'system', text: `📨 subagent report ${n.id}: ${x.summary || x.verdict || x.state}` });
+      const who = ownerBot(n.id);
+      if (who) { moveBot(who, n.id); renderBotsAll(); }
+      refreshUp(n.id); refreshDrawerIf([n.id, n.parentId]);
+    });
+    state.inboxSeen = [...seen].slice(-800);
+    if ((r.items || []).length) { renderEdges(); save(); }
+  }
+  // “Bash py -3.12 C:\long\path\report.py …” → “⌘ report.py”; “Read C:\…\ASSUMPTIONS.md” → “📖 ASSUMPTIONS.md”
+  function toolShort(t) {
+    const m = String(t || '').match(/^(\w+)\s*([\s\S]*)$/);
+    if (!m) return '';
+    const icon = ({ Read: '📖', Edit: '✏️', Write: '✏️', MultiEdit: '✏️', Bash: '⌘', PowerShell: '⌘', Grep: '🔎', Glob: '🔎', TodoWrite: '☑', TaskCreate: '☑', TaskUpdate: '☑', WebFetch: '🌐', WebSearch: '🌐', Agent: '🤖', Task: '🤖' })[m[1]] || '•';
+    if (/^(TodoWrite|TaskCreate|TaskUpdate)$/.test(m[1])) return `${icon} to-do list`;
+    if (/report\.py/i.test(m[2])) return '🗺 map update';
+    const words = m[2].replace(/["']/g, ' ').split(/\s+/).filter(Boolean);
+    const file = words.map(w => w.split(/[\\/]/).pop()).find(w => /\.[A-Za-z0-9]{1,6}$/.test(w) && !/^(python|pythonw|py|node|pwsh|powershell|cmd|bash|git)(\.exe)?$/i.test(w) && !/^-/.test(w));
+    const key = file || (words.find(w => !/^-/.test(w) && !/^(py|python\d?(\.exe)?|cd|Set-Location)$/i.test(w)) || m[1]).split(/[\\/]/).pop();
+    return `${icon} ${key.length > 26 ? key.slice(0, 25) + '…' : key}`;
+  }
+  function extActivityLine(b) {
+    const x = b.extAct;
+    if (!x) return '🔓 In your terminal';
+    if (x.age >= EXT_ACTIVE_S) return '🔓 Terminal · idle';
+    return `🖥 Terminal · ${toolShort(x.tool) || 'working'}`;
+  }
+  // the bot panel: what it does in the terminal (to-do list and last words)
+  function extActivityHtml(b) {
+    const x = b && b.extAct;
+    if (!b || !b.external || !x) return '';
+    const busy = x.age < EXT_ACTIVE_S;
+    const icon = (st) => st === 'completed' ? '<span class="text-emerald-300">✓</span>' : st === 'in_progress' ? '<span class="text-amber-300">■</span>' : '<span class="text-zinc-500">□</span>';
+    return `<div class="mt-1.5 px-3 py-2 rounded-xl bg-amber-500/[0.06] border border-amber-400/25 text-[11px] text-zinc-300">
+      <div class="flex items-center gap-1.5 text-[10.5px] font-mono-sf ${busy ? 'text-amber-200' : 'text-zinc-400'}">${busy ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse"></span>' : ''}${esc(extActivityLine(b))}<span class="ml-auto text-zinc-500">${busy ? 'now' : `${Math.round(x.age / 60)} min ago`}</span></div>
+      ${(x.todos || []).length ? `<div class="mt-1.5 space-y-0.5">${x.todos.map(t => `<div class="flex gap-1.5 items-start ${t.status === 'completed' ? 'text-zinc-500 line-through' : ''}">${icon(t.status)}<span class="min-w-0 truncate" title="${esc(t.content)}">${esc(t.content)}</span></div>`).join('')}</div>` : ''}
+      ${x.text ? `<div class="mt-1.5 text-zinc-400 truncate" title="${esc(x.text)}">💬 ${esc(oneLine(x.text))}</div>` : ''}
+    </div>`;
+  }
+  async function liveCopyReportNote(id) {
+    let r;
+    try { r = await liveApi().report_guide(id); } catch (e) { r = null; }
+    if (!r || !r.ok) return;
+    try { await navigator.clipboard.writeText(r.text); } catch (e) { /* clipboard blocked */ }
+    toast('Copied: paste it into the terminal chat (no need to restart the session)', 'sky');
   }
   function liveTakeBack(botId) {
     const b = botId === 'MC' ? state.mc : botById(botId);
     if (!b) return;
+    b._handTok = null;
+    if (b.tg && b.tg.phase === 'live') { toast('It is still open in a terminal: type /exit there first (step 3)', 'amber'); return; }
     b.external = false;
+    delete b.extAct; delete b.tg; b.extPending = false;
+    if (b !== state.mc) b.status = 'IDLE';
     const where = botId === 'MC' ? state.mc.messages : (state.nodes[b.homeId] || {}).messages;
     if (where) where.push({ sender: 'system', text: '🔒 Taken back: orbmap talks to this session again. Close it in the terminal first so only one side talks to it.' });
     renderBotsAll(); renderDrawer(); save();
@@ -6977,6 +7731,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
   async function liveImportOne(x) {
     const api = liveApi();
     if (!api || !x.folder) { toast('This session has no folder to continue in', 'rose'); return; }
+    state.importedSessions = (state.importedSessions || []).concat([x.id]);
     if (x.as === 'mc') {
       await api.import_session('MC', 'mc', x.folder, x.id, x.fork);
       state.mc.messages.push({ sender: 'system', text: `📥 MC is now your session “${x.name}” (${x.fork ? 'fork' : 'taken over'}). Ask it to draw the map of what it manages.` });
@@ -7049,6 +7804,13 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     const tWhere = target.node ? target.node.messages : target.agent === 'MC' ? state.mc.messages : null;
     if (tWhere && tWhere !== where) tWhere.push({ sender: 'system', text: line });
     renderDrawerMessages(); save();
+    const tObj = target.agent === 'MC' ? state.mc : botById(liveBotOf(target.agent));
+    if (tObj && tObj.external) {   // it is in a terminal: leave the message for it (it reads it with `replies`)
+      try { await liveApi().post_reply(target.agent === 'MC' ? 'MC' : liveBotOf(target.agent), fromLabel, text, mode === 'ask' ? 'a question for you (answer it with tell)' : 'a note'); } catch (e) { /* ignore */ }
+      where.push({ sender: 'system', text: `📮 ${toLabel} is in a terminal: the ${mode === 'ask' ? 'question' : 'note'} waits there (it reads it with replies).` });
+      renderDrawerMessages(); save();
+      return;
+    }
     const msg = `${mode === 'ask' ? 'A question' : 'A note'} from ${fromLabel} (another session in orbmap${src ? `, about card ${src.id} “${src.title}”` : ''}):\n${text}\n\n${mode === 'ask' ? 'Answer in `say`; your answer goes back to them.' : 'No answer is needed; keep it in mind and confirm briefly in `say`.'}`;
     const res = await liveCall({ agent: target.agent, role: target.role, cwd_node: target.cwd_node, kind: 'peer_msg', context: liveContext(target.node, target.agent), message: msg }, target.node || src);
     if (!res.ok || !res.data) return;
@@ -7060,6 +7822,8 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     renderDrawerMessages(); save();
     applyActions(res.data.actions || [], target.node, target.agent, msg, depth + 1);
     if (mode !== 'ask') return;
+    const asker = fromAgent === 'MC' ? state.mc : botById(liveBotOf(fromAgent));
+    if (asker && asker.external) { try { await liveApi().post_reply(fromAgent === 'MC' ? 'MC' : liveBotOf(fromAgent), toLabel, ans, text); } catch (e) { /* ignore */ } return; }
     // the answer goes back into the asker's session; it may reply to the human or keep discussing
     const askerNode = src || null;
     const who = fromAgent === 'MC' ? { agent: 'MC', role: 'mc' } : String(fromAgent).startsWith('EXT~') ? { agent: fromAgent, role: 'peer' } : liveAgentFor(askerNode || state.nodes[(botById(liveBotOf(fromAgent)) || {}).homeId]);
@@ -7075,15 +7839,18 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     if (!el) {
       el = document.createElement('div');
       el.id = 'live-badge';
-      el.className = 'fixed left-3 bottom-3 z-[60] px-3 py-1.5 rounded-full text-[11px] font-mono-sf text-emerald-200 bg-black/60 border border-emerald-400/30 backdrop-blur flex items-center gap-2';
+      el.className = 'fixed left-4 bottom-3 z-[45] pl-3 pr-1.5 py-1 rounded-full text-[11px] font-mono-sf text-emerald-200 bg-black/60 border border-emerald-400/30 backdrop-blur flex items-center gap-2';
       document.body.appendChild(el);
     }
     if (ws) el.dataset.ws = ws;
     const full = el.dataset.ws || '';
     el.title = full;
     el.innerHTML = `<i class="w-1.5 h-1.5 rounded-full bg-emerald-400"></i>LIVE · ${esc(full.split(/[\\/]/).filter(Boolean).pop() || full)} · main ${esc(state.main.hash)}
-      <button id="live-import" class="ml-1 px-2 py-0.5 rounded-full bg-white/10 hover:bg-white/20 text-zinc-100">Import sessions</button>`;
+      <button id="live-import" title="Bring one Claude Code session onto the map" class="ml-1 w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-zinc-100">📥</button>
+      <button id="live-join" title="Copy a join message: paste it into any Claude Code session (VS Code or terminal) and it adds itself here" class="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-zinc-100">📋</button>`;
+    document.body.classList.add('has-live');
     $('live-import').onclick = () => liveOpenImport();
+    $('live-join').onclick = () => liveCopyJoin();
   }
   function liveBoot(startApp) {
     let started = false;
@@ -7101,7 +7868,13 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         renderDrawerMessages();
       }
       liveBadge(info.workspace);
+      // a status saved while something ran (here or in a terminal) is stale after a restart: nothing runs yet
+      liveBots().forEach(b => { if (!b.external && ['VALIDATING', 'THINKING', 'UPLOAD', 'DOWNLOAD', 'WAITING'].includes(b.status)) b.status = 'IDLE'; });
+      renderBotsAll();
       liveResumeJobs();
+      later(liveShortenOld, 1500);
+      setInterval(liveWatchExternal, 8000); liveWatchExternal();
+      setInterval(liveReadInbox, 4000); liveReadInbox();
       document.title = 'orbmap · live';
       $('mode-text').textContent = 'Live · every bot is a Claude Code session';
       $('mode-dot').className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0';
@@ -7392,6 +8165,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     s.epoch = nextEpoch();
     state = s;
     boards[id].state = s;
+    linkChats(s);
     closeDrawer();
     boot(fresh);
     if (!fresh) { applyCamera(); offerResume(); }
@@ -7406,6 +8180,244 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     activate(id, s, false);
     toast(`Goal: ${boardTitle(id)}`, 'sky');
   }
+
+  /* ---------------- New goal: start fresh, or import the work you already have (MC + project sessions) ----------------
+   * A guided import in six steps that tick themselves:
+   *   1 folder → 2 which session is MC → 3 which sessions are projects (tasks / workers) → 4 copy or take over
+   *   → 5 import, then MC proposes the goal and sub-goals → 6 every project says where it stands
+   * ------------------------------------------------------------------------------------------------------------------ */
+  function openNewGoalChoice() {
+    if (!LIVE) return newBoard();
+    $('report-kicker').textContent = 'NEW GOAL';
+    $('report-title').textContent = 'How do you want to start?';
+    $('report-body').innerHTML = `<div class="grid sm:grid-cols-2 gap-3">
+      <button id="ng-fresh" class="text-left p-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1]">
+        <div class="text-[22px]">✨</div><div class="mt-1 text-[14px] font-semibold text-white">New project</div>
+        <div class="mt-1 text-[12px] text-zinc-400">Tell MC what you want to achieve; it proposes sub-goals.</div></button>
+      <button id="ng-import" class="text-left p-4 rounded-2xl bg-sky-500/[0.08] hover:bg-sky-500/[0.14] border border-sky-400/30">
+        <div class="text-[22px]">📥</div><div class="mt-1 text-[14px] font-semibold text-white">Import existing project</div>
+        <div class="mt-1 text-[12px] text-zinc-400">You already run an MC session and project sessions (VS Code or terminal): bring the whole team onto a new map.</div></button>
+    </div>`;
+    $('report-actions').innerHTML = `<button data-act="close-report" class="${btnCls.sec}">Cancel</button>`;
+    const modal = $('report-modal'); modal.classList.remove('hidden'); modal.classList.add('flex');
+    $('ng-fresh').onclick = () => { closeReport(); newBoard(); };
+    $('ng-import').onclick = () => { closeReport(); newBoard(buildBlankState, 'Import: follow the steps'); later(openImportWizard, 350); };
+  }
+  let impWiz = null;
+  const IMP_STEPS = ['Project folder', 'MC session', 'Project sessions', 'Copy or take over', 'Import + organize', 'Where each project stands'];
+  async function openImportWizard() {
+    impWiz = { step: 1, all: [], recent: null, folder: '', loading: false, mcId: '', picks: {}, fork: true, open: [], log: [], proposal: null, waiting: false, created: [], checks: {} };
+    renderImpWizard();
+    const r = await liveApi().recent_folders(12);
+    if (impWiz) { impWiz.recent = Array.isArray(r) ? r : []; renderImpWizard(); }
+  }
+  // only the chosen folder (and its subfolders) is read
+  async function impSetFolder(folder) {
+    const w = impWiz;
+    w.folder = String(folder || '').trim().replace(/^"|"$/g, ''); w.mcId = ''; w.picks = {}; w.all = []; w.loading = !!w.folder;
+    renderImpWizard();
+    if (!w.folder) return;
+    const r = await liveApi().folder_sessions(w.folder);
+    if (impWiz !== w) return;
+    w.all = Array.isArray(r) ? r.filter(x => x.cwd && !x.agent).map(x => ({ ...x, inFolder: true })) : [];
+    w.loading = false;
+    renderImpWizard();
+  }
+  const impNorm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  const impInFolder = () => !impWiz.folder ? [] : (impWiz.all || []).filter(x => x.joined || x.inFolder || impNorm(x.cwd) === impNorm(impWiz.folder) || impNorm(x.cwd).startsWith(impNorm(impWiz.folder) + '/'));
+  // MC: a coordinating name first, then the session in the top folder (projects usually sit in subfolders), then the longest
+  const impGuessMC = (list) => {
+    const score = (x) => (/(^|[^a-z])mc([^a-z]|$)|coordinat|orchestr|controller|manager|overall|主控|總控|統籌|協調|管理/i.test(`${x.name} ${x.first || ''}`) ? 100 : 0)
+      + (impNorm(x.cwd) === impNorm(impWiz.folder) ? 50 : 0) + Math.min(40, x.messages || 0);
+    return (list.slice().sort((a, b) => score(b) - score(a))[0] || {}).id || '';
+  };
+
+  function renderImpWizard() {
+    const w = impWiz;
+    if (!w) return;
+    const modal = $('report-modal'); modal.classList.remove('hidden'); modal.classList.add('flex');
+    $('report-kicker').textContent = `IMPORT EXISTING PROJECT · STEP ${w.step} OF 6`;
+    $('report-title').textContent = IMP_STEPS[w.step - 1];
+    const bar = `<div class="flex flex-wrap gap-1.5 mb-4">${IMP_STEPS.map((t, i) => `<span class="px-2 py-0.5 rounded-full text-[10.5px] ${i + 1 < w.step ? 'bg-emerald-500/15 text-emerald-300' : i + 1 === w.step ? 'bg-sky-500/20 text-sky-100' : 'bg-white/[0.05] text-zinc-500'}">${i + 1 < w.step ? '✓' : i + 1} ${esc(t)}</span>`).join('')}</div>`;
+    const list = impInFolder();
+    const sess = (x, input) => `<label class="flex items-start gap-2.5 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] cursor-pointer">${input}
+      <div class="min-w-0 flex-1"><div class="flex items-center gap-2"><span class="text-[13px] font-semibold text-white truncate">${esc(x.name)}</span>${w.open.includes(x.id) ? chip('open in VS Code / terminal', 'amber') : ''}</div>
+      <div class="text-[11px] font-mono-sf text-zinc-500 truncate" title="${esc(x.cwd)}">${esc(x.cwd)} · ${x.messages} msgs · ${esc((x.last || '').replace('T', ' ').slice(0, 16))}</div>
+      <div class="text-[11.5px] text-zinc-400 truncate">${esc(x.first || '')}</div></div></label>`;
+    let body = '', next = true, nextLabel = 'Next →';
+    if (w.step === 1) {
+      const fs = w.recent || [];
+      body = `<div class="text-[12.5px] text-zinc-300 mb-2">Which folder does your MC work in? Type or paste its path, or pick a recent one. Only that folder and its subfolders are read.</div>
+        <div class="flex gap-2 mb-2"><input id="imp-folder" value="${esc(w.folder)}" placeholder="C:\\path\\to\\your\\project" class="min-w-0 flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[12.5px] text-zinc-100 font-mono-sf" /><button data-imp-use="1" class="${btnCls.sec}">Use</button></div>
+        ${w.folder ? `<div class="mb-2 text-[12px] ${w.loading ? 'text-amber-200' : list.length ? 'text-emerald-300' : 'text-amber-300'}">${w.loading ? 'Reading the sessions of this folder…' : list.length ? `✓ ${list.length} session(s) found in this folder` : 'No Claude Code sessions in this folder (or its subfolders).'}</div>` : ''}
+        <div class="text-[11px] text-zinc-500 mb-1">Recent folders</div>
+        <div class="space-y-1 max-h-[40vh] overflow-y-auto">${w.recent === null ? '<div class="text-[12px] text-zinc-500">Looking…</div>' : fs.length ? fs.map(f => `<button data-imp-folder="${esc(f.cwd)}" class="w-full text-left px-3 py-2 rounded-xl border ${impNorm(f.cwd) === impNorm(w.folder) ? 'bg-sky-500/15 border-sky-400/40' : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.07]'} flex items-center gap-2">
+          <span class="min-w-0 flex-1 truncate font-mono-sf text-[12px] text-zinc-200">${esc(f.cwd)}</span>${chip(`${f.sessions} session${f.sessions > 1 ? 's' : ''}`, 'zinc')}<span class="text-[10.5px] text-zinc-500">${esc(f.last || '')}</span></button>`).join('') : '<div class="text-[12px] text-zinc-500">None found.</div>'}</div>`;
+      next = !!w.folder && !w.loading && list.length > 0;
+    } else if (w.step === 2) {
+      if (!w.mcId && w.mcId !== 'none') w.mcId = impGuessMC(list);
+      body = `<div class="text-[12.5px] text-zinc-300 mb-2">Which session is your MC (the one that coordinates)? My guess is selected.</div>
+        <div class="space-y-1.5 max-h-[52vh] overflow-y-auto">${list.map(x => sess(x, `<input type="radio" name="imp-mc" value="${esc(x.id)}" ${w.mcId === x.id ? 'checked' : ''} class="mt-1" />`)).join('')}
+        ${sess({ id: 'none', name: 'No MC session: let orbmap’s own MC organize', cwd: '', messages: 0, first: 'A new MC session is started for this map.' }, `<input type="radio" name="imp-mc" value="none" ${w.mcId === 'none' ? 'checked' : ''} class="mt-1" />`)}</div>`;
+      next = !!w.mcId;
+    } else if (w.step === 3) {
+      const rest = list.filter(x => x.id !== w.mcId);
+      rest.forEach(x => { if (!w.picks[x.id]) w.picks[x.id] = { on: x.messages >= 2, title: String(x.name || '').slice(0, 48), kind: 'task' }; });
+      body = `<div class="text-[12.5px] text-zinc-300 mb-2 flex items-center justify-between gap-2"><span>Tick the project sessions. Each becomes a task card with its own bot (or a worker that takes jobs).</span><button id="imp-join" title="A session is missing? Paste this message into it and it adds itself to this list" class="${btnCls.ghost} shrink-0">📋 Missing one?</button></div>
+        <div class="space-y-1.5 max-h-[52vh] overflow-y-auto">${rest.length ? rest.map(x => { const pk = w.picks[x.id]; return `<div class="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+          <div class="flex items-center gap-2"><input type="checkbox" data-imp-on="${esc(x.id)}" ${pk.on ? 'checked' : ''} />
+            <input data-imp-title="${esc(x.id)}" value="${esc(pk.title)}" class="min-w-0 flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-[12.5px] text-zinc-100" />
+            <select data-imp-kind="${esc(x.id)}" class="bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-[12px] text-zinc-100"><option value="task" ${pk.kind === 'task' ? 'selected' : ''}>Project (task)</option>${WORKERS.map(k => `<option value="${k.id}" ${pk.kind === k.id ? 'selected' : ''}>${esc(k.title)}</option>`).join('')}</select>
+            ${w.open.includes(x.id) ? chip('open', 'amber', 'Open in VS Code or a terminal right now') : ''}</div>
+          <div class="mt-1 ml-6 text-[11px] font-mono-sf text-zinc-500 truncate">${esc(x.cwd)} · ${x.messages} msgs · ${esc(x.first || '')}</div></div>`; }).join('') : '<div class="text-[12px] text-zinc-500">No other sessions in that folder.</div>'}</div>`;
+      next = rest.some(x => w.picks[x.id].on) || w.mcId !== 'none';
+    } else if (w.step === 4) {
+      const chosen = impChosen();
+      const openTaken = !w.fork && chosen.filter(x => w.open.includes(x.id));
+      body = `<div class="text-[12.5px] text-zinc-300 mb-3">How should orbmap continue these ${chosen.length} session(s)?</div>
+        <label class="flex gap-2.5 p-3 rounded-xl border ${w.fork ? 'bg-sky-500/10 border-sky-400/40' : 'bg-white/[0.03] border-white/[0.08]'} cursor-pointer mb-2"><input type="radio" name="imp-fork" value="1" ${w.fork ? 'checked' : ''} />
+          <div><div class="text-[13px] font-semibold text-white">Copy (recommended)</div><div class="text-[12px] text-zinc-400">orbmap works on copies with the full history. Your original sessions stay exactly as they are, so you can always go back to VS Code.</div></div></label>
+        <label class="flex gap-2.5 p-3 rounded-xl border ${!w.fork ? 'bg-sky-500/10 border-sky-400/40' : 'bg-white/[0.03] border-white/[0.08]'} cursor-pointer"><input type="radio" name="imp-fork" value="0" ${!w.fork ? 'checked' : ''} />
+          <div><div class="text-[13px] font-semibold text-white">Take over</div><div class="text-[12px] text-zinc-400">orbmap continues the same sessions. VS Code later sees everything orbmap did. Never use one session in both places at the same time.</div></div></label>
+        ${openTaken.length ? `<div class="mt-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-[12px] text-amber-100">⚠ Open right now in VS Code or a terminal: ${openTaken.map(x => `<b>${esc(x.name)}</b>`).join(', ')}. Close them there first (then press “Check again”), or choose Copy.
+          <button data-imp-recheck="1" class="${btnCls.ghost} ml-1">Check again</button></div>` : ''}`;
+      next = !openTaken.length;
+    } else if (w.step === 5) {
+      const lines = w.log.map(l => `<div class="flex items-center gap-2 text-[12px]">${l.ok === true ? '<span class="text-emerald-300">✓</span>' : l.ok === false ? '<span class="text-rose-300">✕</span>' : '<span class="w-3 h-3 rounded-full border-2 border-amber-300 border-t-transparent spin"></span>'}<span class="text-zinc-200">${esc(l.text)}</span></div>`).join('');
+      const pr = w.proposal;
+      body = `<div class="space-y-1 mb-3">${lines || '<div class="text-[12.5px] text-zinc-300">Press “Import now”. Each session is brought onto the map; then MC proposes the goal and sub-goals.</div>'}</div>
+        ${w.waiting ? `<div class="text-[12px] text-amber-200 flex items-center gap-2">MC is reading the projects and drafting the map…<button data-imp-skip="1" class="${btnCls.ghost}">Skip: one sub-goal</button></div>` : ''}
+        ${pr ? `<div class="p-3 rounded-xl bg-white/[0.04] border border-white/[0.1]"><div class="text-[11px] text-zinc-500 mb-1">MC proposes</div>
+          <div class="text-[14px] font-semibold text-white mb-2">🎯 ${esc(pr.goal || state.nodes.GOAL.title)}</div>
+          ${(pr.subgoals || []).map((sg, i) => `<div class="mb-1.5"><div class="text-[12.5px] text-violet-200">${i + 1}. ${esc(sg.title)}${(sg.deps || []).length ? ` <span class="text-amber-300 text-[11px]">after ${sg.deps.map(d => d + 1).join(', ')}</span>` : ''}</div>
+            <div class="ml-4 flex flex-wrap gap-1 mt-0.5">${(sg.tasks || []).map(tid => { const t = state.nodes[normId(String(tid))]; return chip(t ? `${t.id} ${t.title.slice(0, 22)}` : tid, t ? 'zinc' : 'red'); }).join('') || '<span class="text-[11px] text-zinc-500">no project yet</span>'}</div></div>`).join('')}
+          <div class="mt-2 flex gap-2"><input id="imp-change" placeholder="Ask MC to change something…" class="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-[12px] text-zinc-100" /><button data-imp-change="1" class="${btnCls.ghost}">Ask</button></div></div>` : ''}`;
+      next = !!pr; nextLabel = pr ? 'Use this map →' : 'Next →';
+    } else if (w.step === 6) {
+      const ts = w.created.map(id => state.nodes[id]).filter(Boolean);
+      body = `<div class="text-[12.5px] text-zinc-300 mb-2">Every project bot says where it stands; its short status goes on its card.</div>
+        <div class="space-y-1">${ts.map(t => { const c = w.checks[t.id]; return `<div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[12px]">${c === undefined ? '<span class="w-3 h-3 rounded-full border-2 border-amber-300 border-t-transparent spin"></span>' : c ? '<span class="text-emerald-300">✓</span>' : '<span class="text-rose-300">✕</span>'}${chip(t.id)}<span class="text-zinc-200 truncate">${esc(t.title)}</span><span class="ml-auto text-amber-200 truncate">${esc(t.verdict || '')}</span></div>`; }).join('') || '<div class="text-[12px] text-zinc-500">No project sessions were imported.</div>'}</div>`;
+      next = true; nextLabel = ts.every(t => w.checks[t.id] !== undefined) ? 'Done' : 'Done (skip the rest)';
+    }
+    $('report-body').innerHTML = bar + body;
+    $('report-actions').innerHTML = `${w.step > 1 && w.step < 5 ? `<button data-imp-nav="back" class="${btnCls.sec}">← Back</button>` : ''}
+      ${w.step === 5 && !w.log.length ? `<button data-imp-go="1" class="${btnCls.pri}">Import now</button>` : `<button data-imp-nav="next" ${next ? '' : 'disabled'} class="${btnCls.pri} disabled:opacity-40">${nextLabel}</button>`}
+      ${w.step < 5 ? `<button data-imp-nav="cancel" class="${btnCls.ghost}">Cancel</button>` : ''}`;
+    const ij = $('imp-join');
+    if (ij) ij.onclick = () => liveCopyJoin();
+    const fi = $('imp-folder');
+    if (fi) fi.onkeydown = (ev) => { if (ev.key === 'Enter') impSetFolder(fi.value); };
+  }
+  const impChosen = () => {
+    const list = impInFolder();
+    return list.filter(x => x.id === impWiz.mcId || (impWiz.picks[x.id] && impWiz.picks[x.id].on));
+  };
+  document.addEventListener('click', async (e) => {
+    const w = impWiz;
+    if (!w || !e.target.closest) return;
+    const f = e.target.closest('[data-imp-folder]');
+    if (f) return impSetFolder(f.dataset.impFolder);
+    if (e.target.closest('[data-imp-use]')) return impSetFolder(($('imp-folder') || {}).value || '');
+    const nav = e.target.closest('[data-imp-nav]');
+    if (nav) {
+      if (w.navBusy) return;
+      w.navBusy = true;
+      try { await impNav(w, nav.dataset.impNav); } finally { w.navBusy = false; }
+      return;
+    }
+    if (e.target.closest('[data-imp-skip]')) {   // MC takes too long: keep one sub-goal
+      w.waiting = false; w.proposal = w.proposal || w.prevProposal || { goal: state.nodes.GOAL.title, subgoals: [{ title: 'Imported projects', tasks: w.created.slice() }] };
+      return renderImpWizard();
+    }
+    if (e.target.closest('[data-imp-recheck]')) { try { const r = await liveApi().sessions_running(impInFolder().map(x => x.id)); w.open = (r && r.open) || []; } catch (er) { /* keep */ } return renderImpWizard(); }
+    if (e.target.closest('[data-imp-go]')) return impRun();
+    if (e.target.closest('[data-imp-change]')) { const v = ($('imp-change') || {}).value || ''; if (v.trim()) { w.prevProposal = w.proposal; w.proposal = null; w.waiting = true; renderImpWizard(); impAskMC(v.trim()); } }
+  });
+  document.addEventListener('change', (e) => {
+    const w = impWiz;
+    if (!w || !e.target.dataset) return;
+    const d = e.target.dataset;
+    if (d.impOn) { w.picks[d.impOn].on = e.target.checked; renderImpWizard(); }
+    if (d.impTitle) w.picks[d.impTitle].title = e.target.value;
+    if (d.impKind) w.picks[d.impKind].kind = e.target.value;
+    if (e.target.name === 'imp-mc') { w.mcId = e.target.value; renderImpWizard(); }
+    if (e.target.name === 'imp-fork') { w.fork = e.target.value === '1'; renderImpWizard(); }
+  });
+  async function impNav(w, k) {
+    if (k === 'cancel') { impWiz = null; closeReport(); return; }
+    if (k === 'back') { w.step = Math.max(1, w.step - 1); return renderImpWizard(); }
+    const at = w.step;
+    if (at === 2) { const r = document.querySelector('input[name=imp-mc]:checked'); if (r) w.mcId = r.value; }
+    if (at === 3 || at === 2) { try { const r = await liveApi().sessions_running(impInFolder().map(x => x.id)); w.open = (r && r.open) || []; } catch (er) { w.open = []; } }
+    if (impWiz !== w || w.step !== at) return;
+    if (at === 4) { const r = document.querySelector('input[name=imp-fork]:checked'); if (r) w.fork = r.value === '1'; }
+    if (at === 5 && w.proposal) { applyOrganize(w.proposal); w.step = 6; renderImpWizard(); return impCheckIn(); }
+    if (at === 6) { impWiz = null; closeReport(); later(() => fitAll(true), 200); toast('Import finished', 'emerald'); return; }
+    w.step = at + 1;
+    return renderImpWizard();
+  }
+  async function impRun() {
+    const w = impWiz;
+    const list = impInFolder();
+    const mc = list.find(x => x.id === w.mcId);
+    const picks = list.filter(x => x.id !== w.mcId && w.picks[x.id] && w.picks[x.id].on);
+    const step = async (text, fn) => { const l = { text, ok: null }; w.log.push(l); renderImpWizard(); try { await fn(); l.ok = true; } catch (er) { l.ok = false; l.text += ` (${er.message || er})`; } renderImpWizard(); };
+    if (!state.nodes.GOAL.goalSet) { state.nodes.GOAL.goalSet = true; state.nodes.GOAL.title = 'Imported work'; refreshCard('GOAL'); }
+    if (mc) await step(`MC ← “${mc.name}”`, () => liveImportOne({ id: mc.id, folder: mc.cwd, name: mc.name, fork: w.fork, as: 'mc' }));
+    for (const x of picks) {
+      const pk = w.picks[x.id];
+      const wk = WORKERS.find(k => k.id === pk.kind);
+      const before = new Set(Object.keys(state.nodes));
+      await step(`${wk ? wk.title : 'Project'} ← “${pk.title || x.name}”`, () => liveImportOne({ id: x.id, folder: x.cwd, name: pk.title || x.name, fork: w.fork, as: wk ? 'worker' : 'task', worker: wk ? wk.id : null }));
+      if (!wk) Object.keys(state.nodes).filter(k => !before.has(k) && state.nodes[k].tier === 'task').forEach(k => w.created.push(k));
+    }
+    w.waiting = true; renderImpWizard();
+    impAskMC('');
+  }
+  async function impAskMC(change) {
+    const w = impWiz;
+    const ts = w.created.map(id => state.nodes[id]).filter(Boolean);
+    const lines = ts.map(t => `- ${t.id} “${t.title}” (session in ${(t.imported || {}).folder || '?'})`).join('\n');
+    const msg = change ? `Change the proposed map: ${change}\nAnswer again with the \`organize\` action.`
+      : `The human just imported their existing work into orbmap. You are (or now coordinate) this team. The project sessions are now these task cards:\n${lines || '- (none)'}\n\n`
+        + `Propose the map: answer with exactly one \`organize\` action: \`goal\` = a short goal title, \`subgoals\` = the sub-goals (title, deps as 0-based indexes, tasks = the task ids above that belong to it; every task id exactly once). Group by what the projects are for, in the order the work flows. Do nothing else in this turn.`;
+    let res;
+    try { res = await Promise.race([liveAsk(null, msg), sleep(240000).then(() => ({ ok: false, error: 'no answer after 4 minutes' }))]); }
+    catch (er) { res = { ok: false, error: String((er && er.message) || er) }; }
+    for (let i = 0; i < 40 && impWiz === w && !w.proposal; i++) await sleep(500);   // MC's actions arrive just after its reply
+    if (impWiz !== w) return;
+    if (!w.proposal) { w.waiting = false; w.log.push({ text: res && res.ok ? (change ? 'MC did not send a new map: the previous one is kept' : 'MC answered without a map: ask it again below, or press Next to keep one sub-goal') : `MC did not answer: ${(res && res.error) || ''}`, ok: false });
+      w.proposal = w.prevProposal || { goal: state.nodes.GOAL.title, subgoals: [{ title: 'Imported projects', tasks: w.created.slice() }] }; renderImpWizard(); }
+    w.prevProposal = null;
+  }
+  function applyOrganize(a) {
+    const g = state.nodes.GOAL;
+    if (a.goal) { g.title = String(a.goal).slice(0, 80); g.goalSet = true; }
+    const subs = (a.subgoals || []).filter(s => s && s.title);
+    if (!subs.length) return;
+    const holders = sgOrder().filter(sg => sg.title === 'Imported sessions');
+    const sgs = createSubgoalsData(subs.map(s => ({ t: s.title, d: (s.deps || []).filter(j => Number.isInteger(j) && j >= 0 && j < subs.length) })), 'MC');
+    subs.forEach((s, i) => (s.tasks || []).forEach(tid => { const t = state.nodes[normId(String(tid))]; if (t && t.tier === 'task') t.parentId = sgs[i].id; }));
+    holders.forEach(sg => { if (!kidsOf(sg.id).length) { const el = $(`bento-${sg.id}`); if (el) { ro.unobserve(el); el.remove(); } delete state.nodes[sg.id]; } });
+    renderAllCards(); applyLayout(true); renderBotsAll(); renderEdges(); refreshCard('GOAL');
+    state.mc.messages.push({ sender: 'system', text: `🗺 Map organized: “${g.title}”, ${sgs.length} sub-goal(s).` });
+    save();
+  }
+  async function impCheckIn() {
+    const w = impWiz;
+    await Promise.all(w.created.map(async (id) => {
+      const t = state.nodes[id];
+      if (!t) { w.checks[id] = false; return; }
+      let res;
+      try { res = await Promise.race([liveAsk(t, 'You were just imported into orbmap. In one short reply: where does this project stand? Start with a status of at most 12 words (no markdown), then at most 2 sentences.'), sleep(240000).then(() => ({ ok: false }))]); }
+      catch (er) { res = { ok: false }; }
+      if (!state.nodes[id]) return;
+      const said = t.messages.slice().reverse().find(m => m.sender === 'bot');
+      if (said) { const first = String(said.text).split('\n')[0].replace(/[*#`]/g, ''); t.verdict = fitLine(first, 46) || fitLine(oneLine(said.text), 46) || clipLine(first, 46); refreshCard(id); }
+      if (impWiz === w) { w.checks[id] = !!(res && res.ok); renderImpWizard(); }
+    }));
+    save();
+  }
   function newBoard(builder = buildBlankState, label = 'New goal: tell MC what you want to achieve') {
     if (!leaveBoardOk()) return;
     ensureBoard();
@@ -7414,6 +8426,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     boards[id] = { id, ns: `${id}_`, state: null };
     boardOrder.push(id);
     const s = builder(nextEpoch());
+    if (state) { s.inboxOffset = state.inboxOffset || 0; s.inboxSeen = (state.inboxSeen || []).slice(); }
     boards[id].state = s;
     activate(id, s, true);
     toast(label, 'sky');
@@ -7460,14 +8473,13 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
         <i class="w-1.5 h-1.5 rounded-full shrink-0 ${waiting(id) ? 'bg-[#FFD60A]' : on ? 'bg-[#0A84FF]' : 'bg-zinc-500'}"></i>
         <span class="truncate max-w-[200px]">${esc(boardTitle(id))}</span>
         <button type="button" data-board-close="${id}" aria-label="Close this goal" class="w-4 h-4 rounded-full grid place-items-center text-[10px] text-zinc-500 hover:text-white hover:bg-white/15 ${boardOrder.length > 1 || boards[id].state.nodes.GOAL.goalSet ? '' : 'invisible'}">✕</button></span>`;
-    }).join('') + `<button type="button" id="board-new" class="h-7 px-2.5 rounded-full text-[11.5px] text-zinc-300 hover:text-white bg-black/45 hover:bg-white/[0.08] border border-dashed border-white/15 whitespace-nowrap backdrop-blur-xl">+ New goal</button>`;
+    }).join('');   // a new goal starts from the New goal button at the top (new project or import)
   }
   function bindBoardTabs() {
     const box = $('board-tabs');
     box.addEventListener('click', (e) => {
       const x = e.target.closest('[data-board-close]');
       if (x) { e.stopPropagation(); return closeBoard(x.dataset.boardClose); }
-      if (e.target.closest('#board-new')) return newBoard();
       const t = e.target.closest('[data-board]');
       if (t) switchBoard(t.dataset.board);
     });
@@ -7475,7 +8487,8 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     box.addEventListener('keydown', (e) => { const t = e.target.closest('[data-board]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); switchBoard(t.dataset.board); } });
   }
   // live: each board talks to its own sessions (agent ids and worktrees carry the board's namespace)
-  const NS_ARG0 = new Set(['commit', 'diff_stat', 'sync_from', 'prepare_review', 'handoff', 'needs_handoff', 'session_command', 'agent_options', 'stop_agent', 'reset_session', 'list_commands', 'import_session']);
+  const NS_ARG0 = new Set(['commit', 'diff_stat', 'sync_from', 'prepare_review', 'handoff', 'needs_handoff', 'session_command', 'agent_options', 'stop_agent', 'reset_session', 'list_commands', 'import_session',
+    'external_activity', 'external_transcript', 'write_context', 'post_reply', 'report_guide']);
   function nsApi(raw) {
     const ns = boardNs();
     if (!ns || !raw) return raw;
@@ -7989,7 +9002,7 @@ fig.savefig(out / f"{args.approach}_gap.png")         # policy: attach a chart
     bindBoardTabs();
     renderBoardTabs();
     boot(!loaded);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => scheduleLayout());
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureNearHeights(visibleNodes(), true); scheduleLayout(); });
     requestAnimationFrame(tick);
     setInterval(renderUsage, 30000);
     if (!loaded) later(() => openController(), 400);

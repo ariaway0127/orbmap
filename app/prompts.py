@@ -76,7 +76,10 @@ KIND_PROMPTS = {
                  "or check (you verify `criteria`)). Pick the shape that fits the work. "
                  "To lay out work use `plan_steps` or `plan_approaches` (only on a card that has no plan yet), `insert_steps` to add steps "
                  "after an existing step, `add_approach` for one more approach, `subplan` to split a step into its own steps, "
-                 "`start` to run, `request_merge` to send a finished task to review. Questions get no actions. "
+                 "`start` to run, `request_merge` to send a finished task to review. "
+                 "When the human says to skip a step, use `skip_step` (target = that step; it counts as finished and is not run); "
+                 "to keep it for later, `hold_step` (the task waits for it); to bring it back, `resume_step`. Never answer that you cannot skip. "
+                 "Questions get no actions. "
                  "If the human asks for something, do it with actions in this same reply instead of asking for confirmation, unless it is irreversible.",
     'plan_tasks': "Plan 1-3 tasks for the sub-goal in Context. Each task should be a piece of work one bot can finish in its own branch. "
                   "Return them with a `create_tasks` action.",
@@ -174,7 +177,7 @@ _action = {
     'type': 'object',
     'properties': {
         'type': {'type': 'string', 'enum': ['propose_split', 'create_tasks', 'add_policy', 'plan_steps', 'plan_approaches', 'insert_steps',
-                                            'add_approach', 'subplan', 'start', 'request_merge', 'submit_job', 'import_session', 'ask', 'tell', 'set_result', 'plan_checklist', 'plan_loop', 'plan_fanout', 'plan_branch', 'plan_matrix', 'plan_stagegate', 'note']},
+                                            'add_approach', 'subplan', 'start', 'request_merge', 'submit_job', 'import_session', 'ask', 'tell', 'set_result', 'skip_step', 'hold_step', 'resume_step', 'plan_checklist', 'plan_loop', 'plan_fanout', 'plan_branch', 'plan_matrix', 'plan_stagegate', 'organize', 'note']},
         'map': {'type': 'string', 'description': 'plan_fanout: the step that splits the work'},
         'reduce': {'type': 'string', 'description': 'plan_fanout: the step that merges the parts'},
         'decide': {'type': 'string', 'description': 'plan_branch: the step that finds out which case applies'},
@@ -192,14 +195,15 @@ _action = {
         'as': {'type': 'string', 'enum': ['task', 'worker', 'mc'], 'description': 'import_session: what it becomes (task under `target` sub-goal, worker CLOUD/BATCH in `worker`, or MC)'},
         'fork': {'type': 'boolean', 'description': 'import_session: true = work on a copy and leave the original untouched'},
         'worker': {'type': 'string', 'description': 'submit_job: CLOUD or BATCH'},
-        'target': {'type': 'string', 'description': 'card id the action applies to (sub-goal for create_tasks, step for insert_steps / subplan, task for start)'},
+        'target': {'type': 'string', 'description': 'card id the action applies to (sub-goal for create_tasks, step for insert_steps / subplan / skip_step / hold_step / resume_step, task for start)'},
         'goal': {'type': 'string', 'description': 'propose_split: short goal title'},
         'subgoals': {'type': 'array', 'items': {'type': 'object', 'properties': {
-            'title': {'type': 'string'}, 'deps': {'type': 'array', 'items': {'type': 'integer'}, 'description': '0-based indexes of sub-goals that must finish first'}},
+            'title': {'type': 'string'}, 'deps': {'type': 'array', 'items': {'type': 'integer'}, 'description': '0-based indexes of sub-goals that must finish first'},
+            'tasks': {'type': 'array', 'items': {'type': 'string'}, 'description': 'organize: ids of existing task cards (T-1…) that belong to this sub-goal'}},
             'required': ['title']}},
         'tasks': {'type': 'array', 'items': _step},
         'steps': {'type': 'array', 'items': _step},
-        'approaches': {'type': 'array', 'items': {'type': 'object', 'properties': {'title': {'type': 'string'}, 'idea': {'type': 'string'}, 'result': _contract}, 'required': ['title', 'idea']}},
+        'approaches': {'type': 'array', 'items': {'type': 'object', 'properties': {'title': {'type': 'string'}, 'label': {'type': 'string', 'description': 'card label: keywords only, at most 14 CJK characters or 28 Latin characters, e.g. "From the FAA/EASA standard". Longer text goes in idea.'}, 'idea': {'type': 'string'}, 'result': _contract}, 'required': ['title', 'label', 'idea']}},
         'text': {'type': 'string', 'description': 'add_policy / note text; submit_job: the job request; ask / tell: the message'},
     },
     'required': ['type'],
@@ -218,6 +222,7 @@ SCHEMAS = {
         'status': {'type': 'string', 'enum': ['done', 'need_user', 'blocked', 'waiting_job']},
         'job': {'type': 'object', 'properties': {'worker': {'type': 'string', 'description': 'CLOUD or BATCH'}, 'request': {'type': 'string'}}, 'required': ['worker', 'request']},
         'summary': {'type': 'string', 'description': 'one line: what you did'},
+        'verdict': {'type': 'string', 'description': 'card status: keywords only, at most 12 CJK characters or 24 Latin characters, e.g. "Extracted · passed". Write it in the human\'s language.'},
         'check': {'type': 'object', 'properties': {'ok': {'type': 'boolean'}, 'text': {'type': 'string'}}, 'required': ['ok', 'text']},
         'output': {'type': 'object', 'properties': {'kind': {'type': 'string', 'enum': ['file', 'text']}, 'label': {'type': 'string', 'description': 'what the step produced, a few words'}}, 'required': ['kind', 'label']},
         'files': {'type': 'array', 'items': {'type': 'string'}},
@@ -228,7 +233,9 @@ SCHEMAS = {
     }, 'required': ['status', 'summary', 'check', 'output']},
     'run_approach': {'type': 'object', 'properties': {
         'status': {'type': 'string', 'enum': ['passed', 'failed', 'need_user']},
-        'summary': {'type': 'string'}, 'reason': {'type': 'string'}, 'lesson': {'type': 'string'}, 'next': {'type': 'string'},
+        'summary': {'type': 'string', 'description': 'ONE short sentence (under 25 words): the verdict. Details go in reason and result.'},
+        'reason': {'type': 'string', 'description': 'why it passed or failed, 1-3 sentences'}, 'lesson': {'type': 'string'}, 'next': {'type': 'string'},
+        'verdict': {'type': 'string', 'description': 'card status: keywords only, at most 12 CJK characters or 24 Latin characters, e.g. "Extracted · passed". Write it in the human\'s language.'},
         'score': {'type': 'number', 'description': '0-100, how well it meets the task'},
         'question': _question,
         'result': _result,

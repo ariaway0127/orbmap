@@ -70,7 +70,7 @@ Each merge bumps main's version and tells every task that depends on it.
 
 ### When you are away
 
-Press **Away** (or `L`) for a log of what happened while you were gone. Every entry has a reason, and decisions waiting for you are listed first. It also opens by itself when you come back to the tab and something changed.
+Press **📊 Dashboard** (or `L`) for a log of what happened while you were gone. Every entry has a reason, and decisions waiting for you are listed first. It also opens by itself when you come back to the tab and something changed.
 
 ## Live mode: real Claude Code sessions
 
@@ -105,6 +105,8 @@ Needs Python 3.10+ and the `claude` CLI, signed in. The workspace becomes a git 
 
 Agents can edit files and run commands inside their folders (`acceptEdits`, Bash allowed; `git commit/push/checkout/merge` are blocked for managed tasks because the app does the git work). Try it on a scratch workspace first.
 
+**Bypass** mode turns off every permission check for that bot, so only use it in a workspace you can throw away. Every bot is a real Claude Code session and uses your own Claude plan or API usage; several bots working at once use it up faster.
+
 ## Keyboard
 
 | Key | Action |
@@ -114,7 +116,7 @@ Agents can edit files and run commands inside their folders (`acceptEdits`, Bash
 | `F` | Fit everything (the **Center goal** button centers the goal) |
 | `M` | Open MC |
 | `1`–`9` | Jump to a bot |
-| `L` | Away mode |
+| `L` | Dashboard |
 | `Esc` | Close the side panel |
 
 Click empty canvas to close the side panel and bring every card back to full brightness.
@@ -144,3 +146,7 @@ See [docs/architecture.md](docs/architecture.md) for how the code is organized.
 ## License
 
 [MIT](LICENSE)
+
+orbmap is an independent project and is not affiliated with or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic.
+
+Third-party parts, loaded at run time and not included in this repository: [Tailwind CSS](https://tailwindcss.com) (MIT), the fonts Inter, JetBrains Mono and Noto Sans TC from Google Fonts (SIL Open Font License 1.1), [pywebview](https://pywebview.flowrl.com) (BSD-3-Clause), optional [psutil](https://github.com/giampaolo/psutil) (BSD-3-Clause), and [Selenium](https://www.selenium.dev) for the tests (Apache-2.0).
