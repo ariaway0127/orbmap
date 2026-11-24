@@ -12,7 +12,7 @@ A spatial canvas for planning work with AI agents. You give it a goal; it splits
 2. Open `index.html` in a browser (Chrome, Edge, Firefox or Safari). There is no build step and no server.
 3. Press **Example** at the top to load a half-finished plan, or type a goal into the MC chat on the right.
 
-`index.html` loads Tailwind CSS and fonts from a CDN. To use it without internet, build the offline copy once (needs Node.js):
+`index.html` loads Tailwind CSS and fonts from a CDN. To use it without internet, download `index.offline.html` from the [latest release](https://github.com/ariaway0127/orbmap/releases/latest) and open it, or build the offline copy yourself (needs Node.js):
 
 ```bash
 python tools/build_offline.py      # writes dist/index.offline.html
